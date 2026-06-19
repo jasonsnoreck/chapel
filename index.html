@@ -1,0 +1,2226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="google-site-verification" content="b5z8WZsVrvTh4qfpKBS9aPgw6NqqwcpSZT4baCGt9QA"/>
+<link rel="manifest" href="/manifest.json"/>
+<meta name="theme-color" content="#1B3A5C"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Chapel"/>
+<link rel="apple-touch-icon" href="/icon-192.png"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Chapel — St. Francis of Assisi</title>
+<style>
+  :root {
+    --navy:#1B3A5C; --gold:#B8942A; --red:#C0392B; --green:#27AE60;
+    --blue:#1B6CA8; --purple:#8E44AD; --bg:#F4F5F7; --white:#fff;
+    --border:#E8E8E8; --text:#222; --muted:#777; --faint:#AAA;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Lato','Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;}
+  button{cursor:pointer;font-family:inherit;}
+  input,select,textarea{font-family:inherit;}
+  a{color:var(--blue);}
+
+  /* LOGIN */
+  #login-screen{position:fixed;inset:0;background:var(--navy);display:flex;align-items:center;justify-content:center;z-index:9999;}
+  .login-card{background:#fff;border-radius:16px;padding:48px 44px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.3);}
+  .login-logo{font-family:Georgia,serif;font-size:28px;font-weight:800;color:var(--navy);margin-bottom:4px;}
+  .login-sub{font-size:12px;color:var(--gold);font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:32px;}
+  .login-field{margin-bottom:16px;}
+  .login-field label{display:block;font-size:12px;font-weight:700;color:#555;margin-bottom:6px;}
+  .login-field input{width:100%;padding:12px 14px;border:1px solid #DDD;border-radius:8px;font-size:14px;}
+  .login-field input:focus{outline:none;border-color:var(--navy);}
+  .login-btn{width:100%;padding:13px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;margin-top:8px;}
+  .login-btn:hover{background:#254d7a;}
+  .login-error{background:#FDEDEC;color:var(--red);border-radius:6px;padding:10px 14px;font-size:13px;margin-bottom:16px;}
+
+  /* LAYOUT */
+  #app{display:flex;height:100vh;overflow:hidden;}
+  #sidebar{width:220px;background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;}
+  #main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+  #topbar{background:#fff;border-bottom:1px solid var(--border);padding:0 28px;height:54px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+  #content{flex:1;overflow-y:auto;padding:28px;}
+
+  /* SIDEBAR */
+  .sb-header{padding:20px 20px 14px;border-bottom:1px solid #ffffff18;}
+  .sb-logo{font-family:Georgia,serif;font-size:20px;font-weight:800;color:#fff;}
+  .sb-site{font-size:10px;color:var(--gold);margin-top:2px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;}
+  .sb-ver{font-size:9px;color:#ffffff44;margin-top:1px;}
+  .sb-nav{flex:1;padding:8px 0;}
+  .sb-btn{display:flex;align-items:center;gap:10px;width:100%;padding:10px 20px;background:transparent;border:none;border-left:3px solid transparent;color:#ffffff77;font-size:13px;font-weight:400;text-align:left;transition:all 0.15s;}
+  .sb-btn:hover{color:#fff;background:#ffffff0d;}
+  .sb-btn.active{color:#fff;background:#ffffff15;border-left-color:var(--gold);font-weight:700;}
+  .sb-badge{margin-left:auto;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;}
+  .sb-footer{padding:12px 20px;border-top:1px solid #ffffff18;}
+  .sb-report-btn{width:100%;background:var(--gold);color:#fff;border:none;border-radius:6px;padding:8px 0;font-size:12px;font-weight:700;margin-bottom:8px;}
+  .sb-name{font-size:11px;font-weight:700;color:#fff;}
+  .sb-role{font-size:10px;color:#ffffff44;}
+  .sb-phone{font-size:10px;color:var(--gold);margin-top:1px;}
+
+  /* SITE SWITCHER */
+  .site-switcher{display:flex;align-items:center;gap:8px;}
+  .site-dot{width:8px;height:8px;border-radius:50%;}
+  .site-select{padding:5px 10px;border-radius:6px;border:1px solid var(--border);font-size:13px;background:#fff;font-weight:600;color:var(--navy);}
+
+  /* TOPBAR */
+  .topbar-title{font-size:17px;font-weight:700;color:var(--navy);font-family:Georgia,serif;}
+  .topbar-actions{display:flex;gap:8px;align-items:center;}
+
+  /* CARDS */
+  .stat-row{display:flex;gap:14px;margin-bottom:20px;flex-wrap:wrap;}
+  .stat-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:18px 22px;flex:1;min-width:100px;}
+  .stat-card.clickable{cursor:pointer;transition:border-color 0.15s;}
+  .stat-card.clickable:hover{border-color:var(--navy);}
+  .stat-val{font-size:30px;font-weight:800;font-family:Georgia,serif;line-height:1;}
+  .stat-lbl{font-size:12px;color:var(--muted);margin-top:4px;}
+  .card{background:#fff;border-radius:10px;border:1px solid var(--border);padding:24px;}
+  .card-title{font-weight:700;font-size:14px;color:var(--navy);margin-bottom:14px;font-family:Georgia,serif;}
+  .two-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+
+  /* ALERTS */
+  .alert{border-radius:10px;padding:14px 20px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;}
+  .alert-body{display:flex;align-items:center;gap:12px;}
+  .alert-icon{font-size:20px;}
+  .alert-title{font-weight:700;font-size:14px;}
+  .alert-sub{font-size:12px;color:var(--muted);}
+
+  /* TABLES */
+  .tbl{background:#fff;border-radius:10px;border:1px solid var(--border);overflow:hidden;width:100%;}
+  .tbl-head{display:grid;padding:8px 18px;background:#F8F9FA;border-bottom:1px solid var(--border);font-size:10px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:0.06em;}
+  .tbl-row{display:grid;padding:11px 18px;border-bottom:1px solid #F0F0F0;align-items:center;cursor:pointer;transition:background 0.1s;}
+  .tbl-row:hover{background:#EBF4FB;}
+  .tbl-row:nth-child(even){background:#FAFAFA;}
+  .tbl-row:nth-child(even):hover{background:#EBF4FB;}
+
+  /* BADGES */
+  .pbadge{border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700;font-family:monospace;}
+  .spill{border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700;}
+
+  /* FORMS */
+  .form-field{margin-bottom:0;}
+  .form-field label{display:block;font-size:11px;font-weight:700;color:#555;margin-bottom:4px;}
+  .form-field input,.form-field select,.form-field textarea{width:100%;padding:8px 10px;border-radius:6px;border:1px solid #DDD;font-size:13px;font-family:inherit;}
+  .form-field input:focus,.form-field select:focus,.form-field textarea:focus{outline:none;border-color:var(--navy);}
+  .form-grid{display:grid;gap:12px;}
+  .form-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+  .span-full{grid-column:1/-1;}
+
+  /* BUTTONS */
+  .btn{border:none;border-radius:6px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity 0.15s;}
+  .btn:hover{opacity:0.88;}
+  .btn-navy{background:var(--navy);color:#fff;}
+  .btn-gold{background:var(--gold);color:#fff;}
+  .btn-green{background:var(--green);color:#fff;}
+  .btn-red{background:var(--red);color:#fff;}
+  .btn-ghost{background:#F0F0F0;color:#555;}
+  .btn-sm{padding:5px 10px;font-size:11px;}
+  .back-btn{background:none;border:none;color:var(--blue);font-size:13px;font-weight:600;margin-bottom:20px;padding:0;cursor:pointer;}
+
+  /* INFO GRID */
+  .info-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;}
+  .info-cell{background:#F8F9FA;border-radius:6px;padding:10px 12px;}
+  .info-label{font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px;}
+  .info-val{font-size:13px;font-weight:600;color:#333;}
+
+  /* CHECKLIST */
+  .check-item{display:flex;gap:10px;padding:9px 10px;border-radius:6px;cursor:pointer;margin-bottom:2px;}
+  .check-item:hover{background:#F0F0F0;}
+  .check-item.done{background:#EAFAF1;}
+  .check-box{width:18px;height:18px;border-radius:3px;border:2px solid #CCC;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;transition:all 0.15s;}
+  .check-box.checked{background:var(--green);border-color:var(--green);}
+  .check-text{font-size:13px;color:#333;}
+  .check-text.done{text-decoration:line-through;color:#1E8449;}
+
+  /* CALENDAR */
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);}
+  .cal-day{min-height:70px;padding:5px 4px 3px;border-right:1px solid #F0F0F0;border-bottom:1px solid #F0F0F0;background:#fff;}
+  .cal-day.today{background:#EBF4FB;}
+  .cal-day.empty{background:#FAFAFA;}
+  .cal-num{font-size:11px;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:2px;color:#555;}
+  .cal-num.today{background:var(--navy);color:#fff;}
+  .cal-evt{border-radius:2px;padding:1px 4px;font-size:9px;font-weight:600;margin-bottom:1px;cursor:pointer;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:#fff;}
+
+  /* REPORT */
+  .report-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;flex-direction:column;overflow:auto;}
+  .report-bar{padding:12px 28px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+  .report-bar-title{color:#fff;font-weight:700;font-size:14px;}
+  .report-body{flex:1;overflow:auto;padding:24px 0;}
+  .report-page{background:#fff;max-width:720px;margin:0 auto;padding:36px 44px;font-family:Georgia,serif;}
+  .report-header{padding-bottom:14px;margin-bottom:16px;}
+  .report-kicker{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;font-family:sans-serif;}
+  .report-title{font-size:20px;font-weight:700;color:var(--navy);margin-top:2px;}
+  .report-meta{font-size:12px;color:var(--muted);font-family:sans-serif;margin-top:4px;}
+  .report-h2{font-size:14px;font-weight:700;color:var(--navy);padding-bottom:5px;margin-bottom:12px;margin-top:22px;}
+  .report-row{display:flex;justify-content:space-between;border-bottom:1px solid #F0F0F0;padding:6px 0;font-size:13px;align-items:flex-start;}
+  .report-ok{background:#EAFAF1;border:1px solid #A9DFBF;border-radius:6px;padding:10px 14px;font-family:sans-serif;font-size:13px;color:#1E8449;}
+  .report-alert{border-radius:6px;padding:10px 14px;margin-bottom:8px;font-family:sans-serif;}
+  .report-cards{display:flex;gap:12px;margin:12px 0;font-family:sans-serif;}
+  .report-card{background:#F8F9FA;border-radius:8px;padding:12px 16px;flex:1;text-align:center;}
+  .report-card-val{font-size:20px;font-weight:800;}
+  .report-card-lbl{font-size:11px;color:var(--muted);}
+  .report-footer{margin-top:28px;padding-top:12px;display:flex;justify-content:space-between;font-size:10px;color:var(--faint);font-family:sans-serif;}
+  @media print{.report-bar{display:none!important;}.report-body{padding:0!important;}.report-page{max-width:100%!important;padding:20px!important;}}
+
+  /* ── MOBILE TOP NAV ── */
+  #mobile-nav{display:none;}
+  #mobile-nav-dropdown{display:none;}
+
+  @media (max-width: 768px) {
+    #sidebar{display:none!important;width:0!important;min-width:0!important;overflow:hidden!important;}
+    #app{flex-direction:column!important;}
+    #main{width:100%!important;max-width:100vw!important;}
+
+    /* Persistent top bar */
+    #mobile-nav{
+      display:flex;align-items:center;justify-content:space-between;
+      background:#1B3A5C;padding:0 10px 0 14px;height:54px;
+      flex-shrink:0;z-index:100;
+    }
+
+    /* Left: Chapel logo acts as hamburger */
+    #mobile-nav-logo{
+      font-family:Georgia,serif;font-size:16px;font-weight:800;
+      color:#fff;cursor:pointer;padding:8px 6px 8px 0;
+      border:none;background:none;font-family:Georgia,serif;
+      display:flex;align-items:center;gap:6px;
+    }
+    #mobile-nav-logo:active{opacity:0.7;}
+
+    /* Right: pinned shortcut icons + overflow indicator */
+    #mobile-nav-shortcuts{
+      display:flex;align-items:center;gap:2px;
+    }
+    .mob-shortcut{
+      display:flex;flex-direction:column;align-items:center;
+      justify-content:center;background:none;border:none;
+      color:#ffffffaa;cursor:pointer;padding:6px 7px;
+      border-radius:8px;position:relative;min-width:36px;
+      font-size:20px;line-height:1;transition:all 0.15s;
+    }
+    .mob-shortcut:active{background:rgba(255,255,255,0.15);}
+    .mob-shortcut.active{color:#fff;background:rgba(255,255,255,0.12);}
+    .mob-shortcut-badge{
+      position:absolute;top:2px;right:2px;
+      background:#B8942A;color:#fff;border-radius:6px;
+      padding:0 4px;font-size:8px;font-weight:700;line-height:14px;
+    }
+    .mob-more-btn{
+      display:flex;flex-direction:column;align-items:center;
+      justify-content:center;background:none;border:none;
+      color:#ffffffaa;cursor:pointer;padding:6px 8px;
+      border-radius:8px;font-size:18px;line-height:1;
+    }
+    .mob-more-btn:active{background:rgba(255,255,255,0.15);}
+
+    /* Full menu dropdown */
+    #mobile-nav-dropdown{
+      display:none;
+      position:fixed;top:54px;left:0;right:0;bottom:0;
+      background:#1B3A5C;z-index:99;overflow-y:auto;
+      padding:14px;
+    }
+    #mobile-nav-dropdown.open{display:block;}
+    .mob-nav-section{
+      font-size:10px;color:#ffffff44;font-weight:700;
+      letter-spacing:0.08em;text-transform:uppercase;
+      padding:10px 0 6px;grid-column:1/-1;
+    }
+    .mob-nav-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px;}
+    .mob-nav-item{
+      display:flex;flex-direction:column;align-items:center;
+      justify-content:center;gap:5px;padding:14px 6px;
+      border-radius:10px;background:rgba(255,255,255,0.07);
+      border:1px solid transparent;cursor:pointer;
+      color:#ffffffbb;font-family:inherit;font-size:11px;
+      font-weight:600;text-align:center;min-height:68px;
+      transition:all 0.15s;
+    }
+    .mob-nav-item:active{background:rgba(255,255,255,0.18);}
+    .mob-nav-item.active{
+      background:rgba(255,255,255,0.15);color:#fff;
+      border-color:rgba(184,148,42,0.5);
+    }
+    .mob-nav-item .mob-icon{font-size:22px;line-height:1;}
+    .mob-nav-badge{
+      background:#B8942A;color:#fff;border-radius:8px;
+      padding:1px 6px;font-size:9px;font-weight:700;
+    }
+    .mob-nav-footer{
+      display:flex;justify-content:space-between;align-items:center;
+      padding:14px 0 8px;border-top:1px solid #ffffff18;margin-top:10px;
+    }
+    .mob-nav-user{font-size:12px;color:#ffffff77;}
+    .mob-nav-signout{
+      background:none;border:1px solid #ffffff33;color:#ffffff77;
+      border-radius:6px;padding:6px 14px;font-size:12px;
+      cursor:pointer;font-family:inherit;
+    }
+
+    #main{flex-direction:column;}
+    #mobile-site-switcher select{
+      background:rgba(255,255,255,0.12);color:#fff;
+      border:1px solid rgba(255,255,255,0.25);border-radius:6px;
+      padding:4px 8px;font-size:12px;font-weight:600;
+      font-family:inherit;cursor:pointer;max-width:100px;
+    }
+    #mobile-site-switcher select option{background:#1B3A5C;color:#fff;}
+    #topbar{display:none!important;}
+    #content{padding:14px;}
+    .stat-row{flex-direction:column;gap:10px;}
+    .stat-card{min-width:unset;}
+    .two-grid{grid-template-columns:1fr;}
+    .info-grid{grid-template-columns:1fr 1fr;}
+    .form-grid-2{grid-template-columns:1fr;}
+    .form-grid-3{grid-template-columns:1fr;}
+    .tbl-head,.tbl-row{font-size:11px;}
+    .report-page{padding:20px 16px!important;}
+    .report-cards{flex-wrap:wrap;}
+    .report-card{min-width:calc(50% - 6px);}
+  }
+
+  /* TOAST */
+  #toast{position:fixed;bottom:20px;right:20px;background:#1E8449;color:#fff;padding:11px 18px;border-radius:8px;font-size:13px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,0.2);z-index:9999;display:none;}
+
+  /* LOADING */
+  .loading{text-align:center;padding:60px;color:var(--faint);font-size:14px;}
+  .spinner{display:inline-block;width:24px;height:24px;border:3px solid #E8E8E8;border-top-color:var(--navy);border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:12px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* MODAL */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:500;display:flex;align-items:center;justify-content:center;}
+  .modal{background:#fff;border-radius:12px;padding:24px;max-width:420px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.2);}
+  .modal-title{font-size:15px;font-weight:700;color:var(--navy);font-family:Georgia,serif;margin-bottom:16px;}
+
+  /* PROGRESS BAR */
+  .progress-bar{background:#E0E0E0;border-radius:4px;height:6px;overflow:hidden;}
+  .progress-fill{height:100%;border-radius:4px;transition:width 0.3s;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">⛪ Chapel</div>
+    <div class="login-sub">Facilities Management</div>
+    <div id="login-error" class="login-error" style="display:none"></div>
+    <div class="login-field">
+      <label>Email Address</label>
+      <input type="email" id="login-email" placeholder="you@example.com" autocomplete="email"/>
+    </div>
+    <div class="login-field">
+      <label>Password</label>
+      <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password"/>
+    </div>
+    <button class="login-btn" onclick="doLogin()">Sign In</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none">
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <div class="sb-header">
+      <button id="sb-toggle" onclick="toggleSidebar()" title="Toggle menu">☰</button>
+      <div id="sb-header-text">
+        <div class="sb-logo">⛪ Chapel</div>
+        <div class="sb-site" id="sb-site-name">St. Francis of Assisi</div>
+        <div class="sb-ver">v5.0 · Facilities</div>
+      </div>
+    </div>
+    <nav class="sb-nav" id="sb-nav"></nav>
+    <div class="sb-footer">
+      <button class="sb-report-btn" onclick="navTo('reporting')">📊 Reporting</button>
+      <div class="sb-name" id="sb-user-name">Jason Snoreck</div>
+      <div class="sb-role" id="sb-user-role">Facilities Director</div>
+      <div class="sb-phone">(708) 269-7148</div>
+    </div>
+  </div>
+
+  <!-- Mobile Top Nav -->
+  <div id="mobile-nav">
+    <button id="mobile-nav-logo" onclick="toggleMobileNav()">⛪ Chapel</button>
+    <div id="mobile-site-switcher"></div>
+    <div id="mobile-nav-shortcuts"></div>
+  </div>
+  <div id="mobile-nav-dropdown">
+    <div id="mob-nav-content"></div>
+    <div class="mob-nav-footer">
+      <div class="mob-nav-user" id="mob-user-name">Jason Snoreck</div>
+      <button class="mob-nav-signout" onclick="localStorage.clear();location.reload()">Sign Out</button>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div id="main">
+    <div id="topbar">
+      <div class="topbar-title" id="topbar-title">Dashboard</div>
+      <div class="topbar-actions">
+        <div class="site-switcher" id="site-switcher"></div>
+        <button class="btn btn-gold" onclick="navTo('report')">Report Issue</button>
+      </div>
+    </div>
+    <div id="content">
+      <div class="loading"><div class="spinner"></div><br>Loading Chapel...</div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────────────────
+const PB = window.location.hostname === 'localhost' || window.location.hostname.match(/^192\./)
+  ? `http://${window.location.hostname}:8090`
+  : `http://${window.location.hostname}:8090`;
+
+// Since nginx proxies /api and /_/ we can use relative URLs
+const API = '/api';
+
+// ── STATE ────────────────────────────────────────────────────────────────────
+let STATE = {
+  token: localStorage.getItem('chapel_token') || '',
+  user: JSON.parse(localStorage.getItem('chapel_user') || 'null'),
+  sites: [],
+  currentSite: null,
+  view: 'dashboard',
+  buildings: [],
+  vendors: [],
+  orders: [],
+  log: [],
+  inventory: [],
+  recur: [],
+  queue: [],
+  checks: [],
+  events: [],
+  users: [],
+  draft: null,
+  activeReport: null,
+  cart: JSON.parse(localStorage.getItem('chapel_cart') || '[]'),
+};
+
+// ── API HELPERS ──────────────────────────────────────────────────────────────
+async function api(method, path, body) {
+  const opts = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(STATE.token ? { 'Authorization': STATE.token } : {})
+    },
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(`${API}/${path}`, opts);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `API error ${res.status}`);
+  }
+  return res.json();
+}
+
+async function getAll(collection, filter = '', sort = '-created') {
+  let url = `collections/${collection}/records?perPage=200&sort=${sort}`;
+  if (filter) url += `&filter=${encodeURIComponent(filter)}`;
+  const res = await api('GET', url);
+  return res.items || [];
+}
+
+async function create(collection, data) {
+  return api('POST', `collections/${collection}/records`, data);
+}
+
+async function update(collection, id, data) {
+  return api('PATCH', `collections/${collection}/records/${id}`, data);
+}
+
+async function remove(collection, id) {
+  return api('DELETE', `collections/${collection}/records/${id}`);
+}
+
+// ── AUTH ─────────────────────────────────────────────────────────────────────
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  sb.classList.toggle('expanded');
+  const btn = document.getElementById('sb-toggle');
+  btn.textContent = sb.classList.contains('expanded') ? '✕' : '☰';
+}
+
+// Close sidebar when nav item clicked on mobile
+function navTo(id) {
+  STATE.view = id;
+  buildNav();
+  const item = NAV_ITEMS.find(n => n.id === id) || { label: id };
+  document.getElementById('topbar-title').textContent = item.label;
+  // Update mobile nav title
+  const mobTitle = document.getElementById('mobile-nav-title');
+  if (mobTitle) mobTitle.textContent = item.label;
+  renderView();
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+
+  try {
+    const res = await fetch('/api/collections/chapel_auth/auth-with-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identity: email, password })
+    });
+
+    if (!res.ok) throw new Error('Invalid email or password.');
+    const data = await res.json();
+    STATE.token = data.token;
+
+    // Look up user profile by email
+    const profileRes = await fetch('/api/collections/user_profiles/records?filter=' + encodeURIComponent('auth_email="' + email + '"') + '&perPage=1', {
+      headers: { 'Authorization': data.token }
+    });
+    const profileData = await profileRes.json();
+    const profile = profileData.items && profileData.items[0];
+
+    STATE.user = profile ? {
+      id: profile.id,
+      name: profile.display_name,
+      email: email,
+      role: profile.role,
+      site_access: profile.site_access || 'SFA',
+      phone: profile.phone || '',
+    } : {
+      id: data.record && data.record.id ? data.record.id : 'user',
+      name: email,
+      email: email,
+      role: 'readonly',
+      site_access: 'SFA',
+      phone: '',
+    };
+    localStorage.setItem('chapel_token', STATE.token);
+    localStorage.setItem('chapel_user', JSON.stringify(STATE.user));
+    await initApp();
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+// Handle Enter key on login
+document.getElementById('login-password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+async function initApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+
+  // Load sites
+  STATE.sites = await getAll('sites', 'active=true', 'name');
+
+  // Set current site based on user profile
+  const siteAccess = STATE.user?.site_access || 'SFA';
+  const allowedCodes = siteAccess.split(',').map(s => s.trim());
+  const allowedSites = STATE.sites.filter(s => allowedCodes.includes(s.code));
+  STATE.allowedSites = allowedSites;
+  STATE.currentSite = allowedSites.length > 0 ? allowedSites[0] : STATE.sites[0];
+
+  // Update UI
+  document.getElementById('sb-user-name').textContent = STATE.user?.name || 'User';
+  document.getElementById('sb-user-role').textContent = STATE.user?.role || '';
+
+  buildSiteSwitcher();
+  buildNav();
+  buildMobileNav();
+  const mobName = document.getElementById('mob-user-name');
+  if (mobName) mobName.textContent = STATE.user ? STATE.user.name : 'User';
+  document.getElementById('content').innerHTML = '<div class="loading"><div class="spinner"></div><br>Loading Chapel...</div>';
+  await loadSiteData();
+  navTo('dashboard');
+}
+
+function buildSiteSwitcher() {
+  const el = document.getElementById('site-switcher');
+  const isAdmin = STATE.user?.role === 'admin';
+
+  const visibleSites = STATE.allowedSites || STATE.sites;
+  if (visibleSites.length > 1) {
+    el.innerHTML = `
+      <div class="site-dot" style="background:${STATE.currentSite?.color||'#1B3A5C'}"></div>
+      <select class="site-select" onchange="switchSite(this.value)">
+        ${isAdmin ? `<option value="ALL" ${!STATE.currentSite ? 'selected' : ''}>All Sites</option>` : ''}
+        ${visibleSites.map(s => `<option value="${s.id}" ${STATE.currentSite?.id === s.id ? 'selected' : ''}>${s.short_name||s.name}</option>`).join('')}
+      </select>
+    `;
+  } else {
+    el.innerHTML = `
+      <div class="site-dot" style="background:${STATE.currentSite?.color||'#1B3A5C'}"></div>
+      <span style="font-size:13px;font-weight:600;color:#1B3A5C">${STATE.currentSite?.short_name || STATE.currentSite?.name || 'Chapel'}</span>
+    `;
+  }
+  document.getElementById('sb-site-name').textContent = STATE.currentSite?.short_name || 'Chapel';
+}
+
+async function switchSite(val) {
+  if (val === 'ALL') {
+    STATE.currentSite = null;
+  } else {
+    STATE.currentSite = STATE.sites.find(s => s.id === val);
+  }
+  buildSiteSwitcher();
+  buildMobileNav();
+  await loadSiteData();
+  navTo(STATE.view);
+}
+
+async function loadSiteData() {
+  const siteFilter = STATE.currentSite ? `site="${STATE.currentSite.id}"` : '';
+  const [buildings, vendors, orders, log, inventory, recur, queue, checks, events, users] = await Promise.all([
+    getAll('buildings', siteFilter ? siteFilter + '&&active=true' : 'active=true', 'name'),
+    getAll('vendors', siteFilter ? siteFilter + '&&active=true' : 'active=true', 'company'),
+    getAll('work_orders', siteFilter, '-date_reported'),
+    getAll('log_entries', siteFilter, '-date_completed'),
+    getAll('inventory', siteFilter, 'name'),
+    getAll('recurring_schedules', siteFilter, 'title'),
+    getAll('queue_items', siteFilter, '-created'),
+    getAll('checklists', siteFilter, 'due_date'),
+    getAll('events', siteFilter, 'date'),
+    Promise.resolve([]),
+  ]);
+  STATE.buildings = buildings;
+  STATE.vendors = vendors;
+  STATE.orders = orders;
+  STATE.log = log;
+  STATE.inventory = inventory;
+  STATE.recur = recur;
+  STATE.queue = queue;
+  STATE.checks = checks;
+  STATE.events = events;
+  STATE.users = users;
+}
+
+// ── PERMISSIONS ──────────────────────────────────────────────────────────────
+function isAdmin() { return STATE.user && STATE.user.role === 'admin'; }
+function canEdit() { return STATE.user && (STATE.user.role === 'admin' || STATE.user.role === 'staff'); }
+function isReadOnly() { return !STATE.user || STATE.user.role === 'readonly'; }
+
+// ── NAV ───────────────────────────────────────────────────────────────────────
+const NAV_ITEMS = [
+  { id:'dashboard',  icon:'⌂',  label:'Dashboard' },
+  { id:'orders',     icon:'≡',  label:'Work Orders' },
+  { id:'queue',      icon:'⏳', label:'Queue' },
+  { id:'recurring',  icon:'🔁', label:'Schedules' },
+  { id:'checklists', icon:'✓',  label:'Checklists' },
+  { id:'log',        icon:'📓', label:'Maint. Log' },
+  { id:'inventory',  icon:'⚙',  label:'Inventory' },
+  { id:'calendar',   icon:'📅', label:'Calendar' },
+  { id:'reporting',  icon:'📊', label:'Reporting' },
+  { id:'vendors',    icon:'☎',  label:'Vendors' },
+  { id:'report',     icon:'↗',  label:'Report Issue' },
+  { id:'settings',   icon:'⚙️', label:'Settings' },
+  { id:'supply', icon:'📦', label:'Supply', external:'/supply.html' },
+];
+
+function buildNav() {
+  const nav = document.getElementById('sb-nav');
+  nav.innerHTML = NAV_ITEMS.map(n => {
+    if (n.external) {
+      return '<a href="' + n.external + '" class="sb-btn" style="text-decoration:none;border-top:1px solid #ffffff18;margin-top:4px;padding-top:14px" title="' + n.label + '">' +
+        '<span class="sb-icon">' + n.icon + '</span><span class="sb-label" style="margin-left:10px">' + n.label + ' ↗</span>' +
+      '</a>';
+    }
+    return '<button class="sb-btn ' + (STATE.view === n.id ? 'active' : '') + '" onclick="navTo(\'' + n.id + '\')" title="' + n.label + '">' +
+      '<span class="sb-icon">' + n.icon + '</span><span class="sb-label" style="margin-left:10px">' + n.label + '</span>' +
+      (n.badge ? '<span class="sb-badge" style="background:' + (n.bc||'#B8942A') + ';margin-left:auto">' + n.badge + '</span>' : '') +
+    '</button>';
+  }).join('');
+}
+
+// navTo defined above with mobile sidebar collapse
+
+function renderView() {
+  const c = document.getElementById('content');
+  switch(STATE.view) {
+    case 'dashboard':   c.innerHTML = renderDashboard(); break;
+    case 'orders':      renderOrders(); break;
+    case 'queue':       c.innerHTML = renderQueue(); break;
+    case 'recurring':   c.innerHTML = renderSchedules(); break;
+    case 'checklists':  renderChecklists(); break;
+    case 'log':         renderLog(); break;
+    case 'inventory':   renderInventory(); break;
+    case 'calendar':    c.innerHTML = renderCalendar(); break;
+    case 'reporting':   c.innerHTML = renderReportingHub(); break;
+    case 'vendors':          c.innerHTML = renderVendors(); break;
+    case 'report':           c.innerHTML = renderReportIssue(); break;
+    case 'settings':         renderSettings().then(html => { if(html) c.innerHTML = html; }); break;
+
+    default:                 c.innerHTML = '<div class="loading">Not found</div>';
+  }
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function today() { return new Date().toISOString().split('T')[0]; }
+function fmtDate(d) { if(!d)return'—'; const p=d.split('T')[0].split('-'); return `${p[1]}/${p[2]}/${p[0]}`; }
+function ago(d) { const x=Math.floor((Date.now()-new Date(d))/86400000); return x===0?'Today':x===1?'Yesterday':`${x}d ago`; }
+function du(d) { return Math.ceil((new Date(d.split('T')[0])-new Date())/86400000); }
+function mlbl() { const n=new Date(); return ['January','February','March','April','May','June','July','August','September','October','November','December'][n.getMonth()]+' '+n.getFullYear(); }
+function mpfx() { return new Date().toISOString().slice(0,7); }
+
+const PC = {
+  P1:{l:'Emergency',c:'#C0392B',b:'#FDEDEC'},
+  P2:{l:'Urgent',c:'#D35400',b:'#FEF0E7'},
+  P3:{l:'Routine',c:'#1B6CA8',b:'#EBF4FB'},
+  P4:{l:'Planned',c:'#27AE60',b:'#EAFAF1'}
+};
+
+function pbadge(p) {
+  const c=PC[p]||PC.P3;
+  return `<span class="pbadge" style="background:${c.b};color:${c.c};border:1px solid ${c.c}33">${p} · ${c.l}</span>`;
+}
+function spill(s) {
+  const o=s==='Open',u=s==='Upcoming'||s==='Pending';
+  return `<span class="spill" style="background:${o?'#FEF9EC':u?'#EBF4FB':'#EAFAF1'};color:${o?'#B7770D':u?'#1B6CA8':'#1E8449'};border:1px solid ${o?'#F0C040':u?'#AED6F1':'#A9DFBF'}">${s}</span>`;
+}
+function sccard(label,value,color,onclick) {
+  return `<div class="stat-card ${onclick?'clickable':''}" style="color:${color||'#1B3A5C'}" ${onclick?`onclick="${onclick}"`:''}><div class="stat-val" style="color:${color||'#1B3A5C'}">${value}</div><div class="stat-lbl">${label}</div></div>`;
+}
+function alert_banner(icon,title,body,btnLabel,btnAction,color,bg,border) {
+  return `<div class="alert" style="background:${bg||'#FEF9EC'};border:1px solid ${border||'#F0C040'}">
+    <div class="alert-body"><span class="alert-icon">${icon}</span><div><div class="alert-title" style="color:${color||'#B7770D'}">${title}</div>${body?`<div class="alert-sub">${body}</div>`:''}</div></div>
+    ${btnLabel?`<button class="btn btn-gold btn-sm" onclick="${btnAction}">${btnLabel}</button>`:''}
+  </div>`;
+}
+function bldgName(id) {
+  if (!id) return '—';
+  const b=STATE.buildings.find(x=>x.id===id);
+  return b?b.name:id;
+}
+function infoGrid(items) {
+  return `<div class="info-grid">${items.map(([l,v])=>`<div class="info-cell"><div class="info-label">${l}</div><div class="info-val">${v||'—'}</div></div>`).join('')}</div>`;
+}
+
+function showToast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.style.display='block';
+  setTimeout(()=>t.style.display='none',3000);
+}
+
+// ── CALENDAR EXPORT ───────────────────────────────────────────────────────────
+function calDate(d) {
+  // Convert YYYY-MM-DD to YYYYMMDD for iCal
+  if (!d) return '';
+  return d.split('T')[0].replace(/-/g,'');
+}
+
+function calDateTime(d) {
+  // All-day event format
+  return calDate(d) || '';
+}
+
+function makeICS(title, date, endDate, description, location) {
+  const uid = 'chapel-' + Date.now() + '@sfaorland.org';
+  const now = new Date().toISOString().replace(/[-:.]/g,'').slice(0,15) + 'Z';
+  const start = calDate(date);
+  const end = calDate(endDate || date);
+  const ics = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Chapel//St. Francis of Assisi//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    'UID:' + uid,
+    'DTSTAMP:' + now,
+    'DTSTART;VALUE=DATE:' + start,
+    'DTEND;VALUE=DATE:' + end,
+    'SUMMARY:' + (title||'').replace(/,/g,'\,'),
+    'DESCRIPTION:' + (description||'').replace(/[\n]/g,"\\n").replace(/,/g,"\\,"),
+    'LOCATION:' + (location||'St. Francis of Assisi, Orland Park IL').replace(/,/g,'\,'),
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\r\n');
+  return ics;
+}
+
+function downloadICS(title, date, endDate, description, location) {
+  const ics = makeICS(title, date, endDate, description, location);
+  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = title.replace(/[^a-z0-9]/gi,'_').toLowerCase() + '.ics';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Calendar file downloaded.');
+}
+
+function googleCalURL(title, date, description, location) {
+  const d = calDate(date);
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: title,
+    dates: d + '/' + d,
+    details: description || '',
+    location: location || 'St. Francis of Assisi, 15050 S. Wolf Rd., Orland Park, IL',
+  });
+  return 'https://calendar.google.com/calendar/render?' + params.toString();
+}
+
+function outlookCalURL(title, date, description, location) {
+  const params = new URLSearchParams({
+    path: '/calendar/action/compose',
+    rru: 'addevent',
+    subject: title,
+    startdt: date || '',
+    enddt: date || '',
+    body: description || '',
+    location: location || 'St. Francis of Assisi, Orland Park, IL',
+  });
+  return 'https://outlook.live.com/calendar/0/action/compose?' + params.toString();
+}
+
+function calButtons(title, date, description, location) {
+  if (!date) return '';
+  const gUrl = googleCalURL(title, date, description, location);
+  const oUrl = outlookCalURL(title, date, description, location);
+  return `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
+    <a href="${gUrl}" target="_blank" style="background:#4285F4;color:#fff;border-radius:5px;padding:5px 10px;font-size:11px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:4px">📅 Google</a>
+    <button onclick="downloadICS('${title.replace(/'/g,"\'")}','${date}','${date}','${(description||'').replace(/'/g,"\'")}','${(location||'').replace(/'/g,"\'")}');event.stopPropagation()" style="background:#555;color:#fff;border:none;border-radius:5px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px">📅 Apple/iCal</button>
+    <a href="${oUrl}" target="_blank" style="background:#0078D4;color:#fff;border-radius:5px;padding:5px 10px;font-size:11px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:4px">📅 Outlook</a>
+  </div>`;
+}
+
+function backBtn(onclick) {
+  return `<button class="back-btn" onclick="${onclick}">← Back</button>`;
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────────────
+function renderDashboard() {
+  // If data not loaded yet, show spinner and retry
+  if (!STATE.sites.length && !STATE.orders.length) {
+    setTimeout(() => {
+      if (STATE.view === 'dashboard') {
+        document.getElementById('content').innerHTML = renderDashboard();
+      }
+    }, 500);
+    return '<div class="loading"><div class="spinner"></div><br>Loading data...</div>';
+  }
+  const open = STATE.orders.filter(o=>o.status==='Open');
+  const p1 = open.filter(o=>o.priority==='P1').length;
+  const mp = mpfx();
+  const closedM = STATE.orders.filter(o=>o.status==='Closed'&&o.date_reported?.startsWith(mp)).length;
+  const pendQ = STATE.queue.filter(q=>q.status==='Pending').length;
+  const ovEq = STATE.inventory.filter(e=>e.next_service&&du(e.next_service)<0).length;
+  const ytd = STATE.orders.reduce((s,o)=>s+parseFloat(o.cost||0),0);
+
+  let html = `<div class="stat-row">
+    ${sccard('Open Work Orders',open.length,p1>0?'#C0392B':'#1B3A5C',"navTo('orders')")}
+    ${sccard('Pending Queue',pendQ,pendQ>0?'#B8942A':'#27AE60',"navTo('queue')")}
+    ${sccard('Closed This Month',closedM,'#27AE60','')}
+    ${sccard('Equipment Overdue',ovEq,ovEq>0?'#C0392B':'#27AE60',"navTo('inventory')")}
+  </div>`;
+
+  if(p1>0) html += alert_banner('🚨','Emergency Issue Open',open.filter(o=>o.priority==='P1').map(o=>o.title).join(' · '),'','','#C0392B','#FDEDEC','#C0392B');
+  if(STATE.draft) html += alert_banner('📓','Log entry ready to review',`Work order closed — review and save.`,'Review →',"navTo('log')",'#B7770D','#FEF9EC','#F0C040');
+  if(pendQ>0) html += alert_banner('⏳',`${pendQ} auto-generated work order${pendQ!==1?'s':''} in queue`,'Review and release from Pending Queue.','Review Queue →',"navTo('queue')",'#B7770D','#FEF9EC','#F0C040');
+
+  html += `<div class="two-grid">
+    <div class="card">
+      <div class="card-title">Open Work Orders</div>
+      ${open.slice(0,5).map(o=>`
+        <div onclick="navTo('orders')" style="padding:8px 0;border-bottom:1px solid #F0F0F0;cursor:pointer;display:flex;justify-content:space-between;align-items:flex-start">
+          <div style="flex:1"><div style="font-size:13px;font-weight:600;color:#222">${o.title}</div><div style="font-size:11px;color:#999">${o.building_name||"—"} · ${ago(o.date_reported)}</div></div>
+          ${pbadge(o.priority)}
+        </div>`).join('')}
+      <button class="back-btn" onclick="navTo('orders')" style="margin-top:10px;margin-bottom:0">View all →</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Upcoming Checklists</div>
+      ${STATE.checks.filter(c=>c.status==='Upcoming').map(c=>`
+        <div onclick="navTo('checklists')" style="padding:8px 0;border-bottom:1px solid #F0F0F0;cursor:pointer;display:flex;justify-content:space-between;align-items:flex-start">
+          <div><div style="font-size:13px;font-weight:600;color:#222">${c.title}</div><div style="font-size:11px;color:#999">${c.building_scope||'All'} · Due ${fmtDate(c.due_date)}</div></div>
+          ${spill(c.status)}
+        </div>`).join('')}
+    </div>
+    <div class="card">
+      <div class="card-title">Issues by Building</div>
+      ${STATE.buildings.map(b=>{
+        const cnt=open.filter(o=>o.building===b.id).length;
+        return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <div style="font-size:12px;color:#444;width:120px">${b.name}</div>
+          <div class="progress-bar" style="flex:1"><div class="progress-fill" style="width:${cnt?Math.min(100,cnt*25):0}%;background:#1B3A5C"></div></div>
+          <div style="font-size:12px;font-weight:700;color:${cnt>0?'#1B3A5C':'#CCC'};width:16px;text-align:right">${cnt||'—'}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div style="background:#1B3A5C;border-radius:10px;padding:20px;color:#fff">
+      <div style="font-weight:700;font-size:14px;color:#B8942A;margin-bottom:4px;font-family:Georgia,serif">${mlbl()} Summary</div>
+      <div style="font-size:11px;color:#ffffff55;margin-bottom:12px">For Reporting</div>
+      ${[
+        ['Issues Reported',STATE.orders.filter(o=>o.date_reported?.startsWith(mp)).length,'#fff'],
+        ['Resolved',closedM,'#A9DFBF'],
+        ['Currently Open',open.length,p1>0?'#F1948A':'#fff'],
+        ['YTD Spend','$'+ytd.toLocaleString(),'#B8942A'],
+      ].map(([l,v,c])=>`<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:#ffffff99">${l}</span><span style="font-weight:700;color:${c}">${v}</span></div>`).join('')}
+      <button class="btn btn-gold" style="margin-top:14px;width:100%;font-size:12px" onclick="STATE.activeReport='pastor';navTo('reporting')">Open Full Report →</button>
+    </div>
+  </div>`;
+  return html;
+}
+
+// ── WORK ORDERS ───────────────────────────────────────────────────────────────
+let WO_STATE = { sel: null, showNew: false, fSt:'All', fPr:'All', fBl:'All' };
+
+function renderOrders() {
+  const c = document.getElementById('content');
+  if (WO_STATE.sel) { c.innerHTML = renderOrderDetail(WO_STATE.sel); return; }
+  if (WO_STATE.showNew) { c.innerHTML = renderNewOrder(); return; }
+
+  const list = STATE.orders.filter(o =>
+    (WO_STATE.fSt==='All'||o.status===WO_STATE.fSt) &&
+    (WO_STATE.fPr==='All'||o.priority===WO_STATE.fPr) &&
+    (WO_STATE.fBl==='All'||o.building===WO_STATE.fBl)
+  );
+
+  c.innerHTML = `
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+      ${['All','Open','Closed'].map(s=>`<button class="btn ${WO_STATE.fSt===s?'btn-navy':'btn-ghost'} btn-sm" onclick="WO_STATE.fSt='${s}';renderOrders()">${s}</button>`).join('')}
+      <span style="color:#DDD">|</span>
+      ${['All','P1','P2','P3','P4'].map(p=>`<button class="btn ${WO_STATE.fPr===p?'btn-navy':'btn-ghost'} btn-sm" onclick="WO_STATE.fPr='${p}';renderOrders()">${p}</button>`).join('')}
+      <select onchange="WO_STATE.fBl=this.value;renderOrders()" style="padding:5px 10px;border-radius:6px;border:1px solid #DDD;font-size:12px;margin-left:auto">
+        <option value="All">All Buildings</option>
+        ${STATE.buildings.map(b=>`<option value="${b.id}" ${WO_STATE.fBl===b.id?'selected':''}>${b.name}</option>`).join('')}
+      </select>
+      ${!isReadOnly() ? '<button class="btn btn-navy btn-sm" onclick="WO_STATE.showNew=true;renderOrders()">+ New</button>' : ''}
+    </div>
+    <div class="tbl">
+      <div class="tbl-head" style="grid-template-columns:80px 1fr 140px 120px 90px">
+        <div>ID</div><div>Issue</div><div>Building</div><div>Priority</div><div>Status</div>
+      </div>
+      ${list.length===0?'<div class="loading">No work orders match.</div>':''}
+      ${list.map(o=>`
+        <div class="tbl-row" style="grid-template-columns:80px 1fr 140px 120px 90px" onclick="WO_STATE.sel=STATE.orders.find(x=>x.id==='${o.id}');renderOrders()">
+          <div style="font-size:11px;color:#AAA;font-family:monospace">${o.id?.slice(-6)||'—'}</div>
+          <div><div style="font-size:13px;font-weight:600;color:#222">${o.title}</div><div style="font-size:11px;color:#AAA">${o.category} · ${o.reporter||'—'}</div></div>
+          <div style="font-size:12px;color:#555">${o.building_name||"—"}</div>
+          ${pbadge(o.priority)}
+          ${spill(o.status)}
+        </div>`).join('')}
+    </div>
+    <div style="margin-top:8px;font-size:11px;color:#AAA">${list.length} records</div>
+  `;
+}
+
+function renderOrderDetail(o) {
+  return `
+    ${backBtn("WO_STATE.sel=null;renderOrders()")}
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+        <div><div style="font-size:11px;color:#AAA;font-family:monospace">${o.id?.slice(-6)||''}</div><div style="font-size:18px;font-weight:700;color:#1B3A5C;font-family:Georgia,serif">${o.title}</div></div>
+        <div style="display:flex;gap:8px">${pbadge(o.priority)}${spill(o.status)}</div>
+      </div>
+      ${infoGrid([['Building',o.building_name||"—"],['Location',o.location],['Category',o.category],['Reporter',o.reporter],['Assigned To',o.assignee],['Vendor',o.vendor_name],['Reported',fmtDate(o.date_reported)],['Scheduled',fmtDate(o.scheduled_date)],['Cost',o.cost>0?'$'+parseFloat(o.cost).toLocaleString():'—']])}
+      ${o.notes?`<div style="background:#F8F9FA;border-radius:6px;padding:12px 14px;margin-bottom:16px"><div style="font-size:10px;color:#999;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Notes</div><div style="font-size:13px;color:#333;line-height:1.6">${o.notes}</div></div>`:''}
+      ${o.scheduled_date?`<div style="margin-bottom:12px"><div style="font-size:11px;font-weight:700;color:#555;margin-bottom:4px">ADD TO CALENDAR</div>${calButtons(o.title,o.scheduled_date,'Work Order: '+o.title+(o.notes?' — '+o.notes:''),o.building_name||'St. Francis of Assisi')}</div>`:''}
+      <div style="display:flex;gap:8px">
+        ${!isReadOnly() ? (o.status==='Open'
+          ? `<button class="btn btn-green" onclick="closeOrder('${o.id}')">✓ Close Work Order</button>`
+          : `<button class="btn btn-ghost" style="background:#F39C12;color:#fff" onclick="reopenOrder('${o.id}')">↺ Reopen</button>`) : ''}
+        <button class="btn btn-ghost" onclick="WO_STATE.sel=null;renderOrders()">Back</button>
+      </div>
+    </div>`;
+}
+
+function renderNewOrder() {
+  const bldgOpts = STATE.buildings.map(b=>`<option value="${b.id}">${b.name}</option>`).join('');
+  const userOpts = STATE.users.map(u=>`<option>${u.name}</option>`).join('');
+  const cats = ['HVAC','Plumbing','Electrical','Fire Safety','Security','Elevator','Roofing','Grounds','Kitchen','AV / Organ','General'];
+  return `
+    ${backBtn("WO_STATE.showNew=false;renderOrders()")}
+    <div class="card" style="max-width:680px">
+      <div style="font-size:16px;font-weight:700;color:#1B3A5C;font-family:Georgia,serif;margin-bottom:16px">New Work Order</div>
+      <div class="form-grid">
+        <div class="form-field"><label>Title *</label><input id="no-title" placeholder="Brief description"/></div>
+        <div class="form-field"><label>Location</label><input id="no-loc" placeholder="Room, area, or zone"/></div>
+        <div class="form-grid-2">
+          <div class="form-field"><label>Building</label><select id="no-bldg">${bldgOpts}</select></div>
+          <div class="form-field"><label>Priority</label><select id="no-pri"><option>P3</option><option>P1</option><option>P2</option><option>P4</option></select></div>
+          <div class="form-field"><label>Category</label><select id="no-cat">${cats.map(c=>`<option>${c}</option>`).join('')}</select></div>
+          <div class="form-field"><label>Assign To</label><select id="no-asgn"><option value="">Unassigned</option>${userOpts}</select></div>
+        </div>
+        <div class="form-field"><label>Vendor</label><input id="no-vendor"/></div>
+        <div class="form-field"><label>Scheduled Date (optional)</label><input type="date" id="no-scheduled"/></div>
+        <div class="form-field"><label>Notes</label><textarea id="no-notes" rows="3"></textarea></div>
+        <button class="btn btn-navy" onclick="createOrder()">Create Work Order</button>
+      </div>
+    </div>`;
+}
+
+async function createOrder() {
+  const title = document.getElementById('no-title').value.trim();
+  if (!title) return;
+  try {
+    const rec = await create('work_orders', {
+      site: STATE.currentSite?.id,
+      title,
+      location: document.getElementById('no-loc').value,
+      building_name: STATE.buildings.find(b=>b.id===document.getElementById('no-bldg').value)?.name||'',
+      priority: document.getElementById('no-pri').value,
+      category: document.getElementById('no-cat').value,
+      assignee: document.getElementById('no-asgn').value,
+      vendor_name: document.getElementById('no-vendor').value,
+      notes: document.getElementById('no-notes').value,
+      scheduled_date: document.getElementById('no-scheduled').value || '',
+      status: 'Open',
+      date_reported: today(),
+      reporter: STATE.user?.name || 'Unknown',
+      cost: 0,
+    });
+    STATE.orders.unshift(rec);
+    WO_STATE.showNew = false;
+    showToast('Work order created.');
+    renderOrders();
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+
+async function closeOrder(id) {
+  const o = STATE.orders.find(x=>x.id===id);
+  await update('work_orders', id, { status:'Closed', date_closed: today() });
+  o.status = 'Closed'; o.date_closed = today();
+  if (WO_STATE.sel?.id === id) WO_STATE.sel = o;
+  STATE.draft = {
+    work_order_id: id, date_completed: today(),
+    completed_by: o.assignee || STATE.user?.name || 'Jason Snoreck',
+    vendor_name: o.vendor_name || '', category: o.category || 'General',
+    building_name: o.building_name||'', location: o.location || '',
+    description: o.notes || '', invoice_number: '', invoice_url: '',
+    cost: parseFloat(o.cost||0), equipment_name: '', next_service_note: '',
+    site: STATE.currentSite?.id,
+  };
+  showToast('Work order closed. Log entry ready to review.');
+  WO_STATE.sel = o;
+  renderOrders();
+}
+
+async function reopenOrder(id) {
+  await update('work_orders', id, { status:'Open', date_closed:'' });
+  const o = STATE.orders.find(x=>x.id===id);
+  o.status = 'Open';
+  if (WO_STATE.sel?.id === id) WO_STATE.sel = o;
+  showToast('Reopened.');
+  renderOrders();
+}
+
+// ── QUEUE ─────────────────────────────────────────────────────────────────────
+function renderQueue() {
+  const pending = STATE.queue.filter(q=>q.status==='Pending');
+  return `
+    <div class="stat-row">
+      ${sccard('Pending Review',pending.length,pending.length>0?'#B8942A':'#27AE60','')}
+      ${sccard('Released',STATE.queue.filter(q=>q.status==='Released').length,'#1B3A5C','')}
+    </div>
+    ${pending.length===0?'<div style="background:#EAFAF1;border:1px solid #A9DFBF;border-radius:10px;padding:18px 22px;color:#1E8449;font-weight:600">✓ Queue is clear.</div>':''}
+    ${pending.map(item=>`
+      <div class="card" style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+          <div>
+            <div style="font-size:11px;color:#B8942A;font-weight:700;text-transform:uppercase;margin-bottom:2px">Auto-Generated</div>
+            <div style="font-size:15px;font-weight:700;color:#1B3A5C">${item.title}</div>
+            <div style="font-size:12px;color:#777">${item.building_scope||'All'} · Due ${fmtDate(item.due_date)}</div>
+          </div>
+          ${pbadge(item.priority)}
+        </div>
+        ${item.notes?`<div style="background:#F8F9FA;border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#555">${item.notes}</div>`:''}
+        ${item.dueDate||item.due_date?`<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:700;color:#555;margin-bottom:4px">ADD TO CALENDAR</div>${calButtons(item.title,item.dueDate||item.due_date,item.title+(item.notes?' — '+item.notes:''),item.building_scope||'St. Francis of Assisi')}</div>`:''}
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-green" onclick="releaseQueue('${item.id}')">✓ Release as Work Order</button>
+          <button class="btn btn-ghost" onclick="dismissQueue('${item.id}')">Dismiss</button>
+        </div>
+      </div>`).join('')}`;
+}
+
+async function releaseQueue(id) {
+  const item = STATE.queue.find(q=>q.id===id);
+  try {
+    const wo = await create('work_orders', {
+      site: item.site, title: item.title,
+      building: '', location: '', priority: item.priority,
+      status: 'Open', category: item.category,
+      reporter: 'Chapel (Auto)', date_reported: today(),
+      notes: item.notes, vendor_name: item.vendor_name||'', cost:0, assignee: item.assignee||'',
+    });
+    STATE.orders.unshift(wo);
+    await update('queue_items', id, { status:'Released' });
+    item.status = 'Released';
+    showToast('Work order created.');
+    document.getElementById('content').innerHTML = renderQueue();
+  } catch(e) { showToast('Error: '+e.message); }
+}
+
+async function dismissQueue(id) {
+  await update('queue_items', id, { status:'Dismissed' });
+  STATE.queue.find(q=>q.id===id).status = 'Dismissed';
+  showToast('Dismissed.');
+  document.getElementById('content').innerHTML = renderQueue();
+}
+
+// ── SCHEDULES ─────────────────────────────────────────────────────────────────
+function renderSchedules() {
+  const ov = STATE.recur.filter(r=>r.active&&r.next_due&&du(r.next_due)<=0);
+  return `
+    ${ov.length>0?`<div style="background:#FDEDEC;border:1px solid #C0392B44;border-radius:10px;padding:14px 18px;margin-bottom:16px">
+      <div style="font-weight:700;color:#C0392B;margin-bottom:8px">⚠ ${ov.length} overdue</div>
+      ${ov.map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:13px;color:#555">${r.title}</span><button class="btn btn-red btn-sm" onclick="genQueue('${r.id}')">Add to Queue</button></div>`).join('')}
+    </div>`:''}
+    <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+      <button class="btn btn-navy btn-sm" onclick="showNewSchedule()">+ New Schedule</button>
+    </div>
+    <div class="tbl">
+      <div class="tbl-head" style="grid-template-columns:1fr 90px 90px 100px 140px">
+        <div>Schedule</div><div>Interval</div><div>Building</div><div>Next Due</div><div>Actions</div>
+      </div>
+      ${STATE.recur.map((r,i)=>{
+        const d=r.next_due?du(r.next_due):null,isOv=d!==null&&d<=0;
+        return `<div class="tbl-row" style="grid-template-columns:1fr 90px 90px 100px 140px;background:${isOv?'#FFF9F9':i%2===0?'#fff':'#FAFAFA'};opacity:${r.active?1:0.5};cursor:default">
+          <div><div style="font-size:13px;font-weight:600;color:#222">${r.title}</div><div style="font-size:11px;color:#AAA">${r.category}</div></div>
+          <div style="font-size:12px;color:#555">${r.interval}</div>
+          <div style="font-size:12px;color:#555">${r.building_scope||'All'}</div>
+          <div style="font-size:12px;font-weight:${isOv?700:400};color:${isOv?'#C0392B':'#555'}">${fmtDate(r.next_due)}</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+            ${r.active?`<button class="btn btn-sm" style="background:${isOv?'#C0392B':'#1B3A5C'};color:#fff" onclick="genQueue('${r.id}')">→ Queue</button>`:''}
+            <button class="btn btn-ghost btn-sm" onclick="toggleSchedule('${r.id}')">${r.active?'Pause':'Resume'}</button>
+            ${r.next_due?`<button class="btn btn-ghost btn-sm" onclick="downloadICS('${r.title.replace(/'/g,"\'")}','${r.next_due}','${r.next_due}','${r.title.replace(/'/g,"\'")} — Due ${r.next_due}','St. Francis of Assisi');event.stopPropagation()" style="color:#555">📅 iCal</button>`:''}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+async function genQueue(id) {
+  const r = STATE.recur.find(x=>x.id===id);
+  try {
+    const item = await create('queue_items', {
+      site: r.site, title: r.title, category: r.category,
+      building_scope: r.building_scope, priority: r.priority,
+      vendor_name: r.vendor_name||'', due_date: r.next_due,
+      notes: r.notes||'', assignee:'', status:'Pending',
+    });
+    STATE.queue.unshift(item);
+    // Advance next due
+    const d=new Date(r.next_due);
+    const iv=r.interval;
+    if(iv==='Daily')d.setDate(d.getDate()+1);
+    else if(iv==='Weekly')d.setDate(d.getDate()+7);
+    else if(iv==='Monthly')d.setMonth(d.getMonth()+1);
+    else if(iv==='Quarterly')d.setMonth(d.getMonth()+3);
+    else if(iv==='Semi-annual')d.setMonth(d.getMonth()+6);
+    else d.setFullYear(d.getFullYear()+1);
+    const newDue = d.toISOString().split('T')[0];
+    await update('recurring_schedules', id, { next_due: newDue });
+    r.next_due = newDue;
+    showToast(`"${r.title}" added to queue.`);
+    document.getElementById('content').innerHTML = renderSchedules();
+  } catch(e) { showToast('Error: '+e.message); }
+}
+
+async function toggleSchedule(id) {
+  const r = STATE.recur.find(x=>x.id===id);
+  await update('recurring_schedules', id, { active: !r.active });
+  r.active = !r.active;
+  document.getElementById('content').innerHTML = renderSchedules();
+}
+
+function showNewSchedule() {
+  const cats=['HVAC','Plumbing','Electrical','Fire Safety','Security','Elevator','Roofing','Grounds','Kitchen','AV / Organ','General'];
+  const ivs=['Daily','Weekly','Monthly','Quarterly','Semi-annual','Annual'];
+  document.getElementById('content').innerHTML = `
+    ${backBtn("document.getElementById('content').innerHTML=renderSchedules()")}
+    <div class="card" style="max-width:600px">
+      <div style="font-size:16px;font-weight:700;color:#1B3A5C;font-family:Georgia,serif;margin-bottom:16px">New Recurring Schedule</div>
+      <div class="form-grid">
+        <div class="form-field span-full"><label>Task Title *</label><input id="ns-title"/></div>
+        <div class="form-grid-2">
+          <div class="form-field"><label>Category</label><select id="ns-cat">${cats.map(c=>`<option>${c}</option>`).join('')}</select></div>
+          <div class="form-field"><label>Interval</label><select id="ns-iv">${ivs.map(v=>`<option>${v}</option>`).join('')}</select></div>
+          <div class="form-field"><label>Next Due Date *</label><input type="date" id="ns-due"/></div>
+          <div class="form-field"><label>Priority</label><select id="ns-pri"><option>P3</option><option>P1</option><option>P2</option><option>P4</option></select></div>
+          <div class="form-field"><label>Vendor</label><input id="ns-vendor"/></div>
+          <div class="form-field"><label>Building Scope</label><select id="ns-bldg"><option value="All">All Buildings</option>${STATE.buildings.map(b=>`<option value="${b.name}">${b.name}</option>`).join('')}</select></div>
+        </div>
+        <div class="form-field span-full"><label>Notes</label><textarea id="ns-notes" rows="2"></textarea></div>
+        <button class="btn btn-navy" onclick="saveNewSchedule()">Save Schedule</button>
+      </div>
+    </div>`;
+}
+
+async function saveNewSchedule() {
+  const title = document.getElementById('ns-title').value.trim();
+  const due = document.getElementById('ns-due').value;
+  if(!title||!due) return;
+  try {
+    const rec = await create('recurring_schedules', {
+      site: STATE.currentSite?.id, title,
+      category: document.getElementById('ns-cat').value,
+      interval: document.getElementById('ns-iv').value,
+      next_due: due, priority: document.getElementById('ns-pri').value,
+      vendor_name: document.getElementById('ns-vendor').value,
+      building_scope: document.getElementById('ns-bldg').value,
+      notes: document.getElementById('ns-notes').value,
+      active: true,
+    });
+    STATE.recur.push(rec);
+    showToast('Schedule created.');
+    document.getElementById('content').innerHTML = renderSchedules();
+  } catch(e) { showToast('Error: '+e.message); }
+}
+
+// ── CHECKLISTS ────────────────────────────────────────────────────────────────
+let CK_STATE = { sel: null, checked: {} };
+
+function renderChecklists() {
+  const c = document.getElementById('content');
+  if (CK_STATE.sel) { c.innerHTML = renderCheckDetail(); return; }
+  c.innerHTML = `<div style="display:flex;flex-direction:column;gap:10px">
+    ${STATE.checks.map(ck=>`
+      <div onclick="CK_STATE.sel=STATE.checks.find(x=>x.id==='${ck.id}');CK_STATE.checked={};renderChecklists()"
+        style="background:#fff;border-radius:10px;border:1px solid #E8E8E8;padding:14px 18px;cursor:pointer;display:flex;justify-content:space-between;align-items:center"
+        onmouseover="this.style.borderColor='#1B3A5C'" onmouseout="this.style.borderColor='#E8E8E8'">
+        <div>
+          <div style="font-size:14px;font-weight:700;color:#1B3A5C">${ck.title}</div>
+          <div style="font-size:12px;color:#AAA;margin-top:2px">${ck.building_scope||'All'} · Due ${fmtDate(ck.due_date)} · ${(ck.items?JSON.parse(ck.items):[]).length} items</div>
+        </div>
+        ${spill(ck.status)}
+      </div>`).join('')}
+  </div>`;
+}
+
+function renderCheckDetail() {
+  const ck = CK_STATE.sel;
+  const items = ck.items ? JSON.parse(ck.items) : [];
+  const done = Object.values(CK_STATE.checked).filter(Boolean).length;
+  const all = items.length;
+  return `
+    ${backBtn("CK_STATE.sel=null;CK_STATE.checked={};renderChecklists()")}
+    <div class="card" style="max-width:600px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+        <div style="font-size:18px;font-weight:700;color:#1B3A5C;font-family:Georgia,serif">${ck.title}</div>
+        ${spill(ck.status)}
+      </div>
+      <div style="font-size:12px;color:#AAA;margin-bottom:16px">${ck.building_scope||'All'} · Due ${fmtDate(ck.due_date)}</div>
+      <div style="background:#F8F9FA;border-radius:6px;padding:8px 12px;margin-bottom:16px;display:flex;align-items:center;gap:10px">
+        <div class="progress-bar" style="flex:1"><div class="progress-fill" style="width:${all?Math.round(done/all*100):0}%;background:${done===all?'#27AE60':'#1B3A5C'}"></div></div>
+        <div style="font-size:12px;font-weight:700;color:${done===all?'#27AE60':'#555'}">${done}/${all}</div>
+      </div>
+      ${items.map((item,i)=>`
+        <div class="check-item ${CK_STATE.checked[i]?'done':''}" onclick="CK_STATE.checked[${i}]=!CK_STATE.checked[${i}];renderChecklists()">
+          <div class="check-box ${CK_STATE.checked[i]?'checked':''}">${CK_STATE.checked[i]?'<span style="color:#fff;font-size:11px;font-weight:900">✓</span>':''}</div>
+          <div class="check-text ${CK_STATE.checked[i]?'done':''}">${item}</div>
+        </div>`).join('')}
+      <div style="margin-top:16px">
+        ${ck.status==='Upcoming'
+          ? `<button class="btn ${done===all?'btn-green':'btn-ghost'}" onclick="completeChecklist('${ck.id}',${done===all})">${done===all?'✓ Mark Complete':`${all-done} items remaining`}</button>`
+          : `<div style="background:#EAFAF1;border:1px solid #A9DFBF;border-radius:6px;padding:10px 14px;color:#1E8449;font-weight:700">✓ Complete</div>`}
+      </div>
+    </div>`;
+}
+
+async function completeChecklist(id, ready) {
+  if (!ready) return;
+  await update('checklists', id, { status:'Completed', completed_by: STATE.user?.name||'', completed_date: today() });
+  const ck = STATE.checks.find(x=>x.id===id);
+  ck.status = 'Completed';
+  CK_STATE.sel = null; CK_STATE.checked = {};
+  showToast('Checklist complete!');
+  renderChecklists();
+}
+
+// ── MAINTENANCE LOG ────────────────────────────────────────────────────────────
+let LOG_STATE = { sel: null, showForm: false, fBl:'All', fCt:'All', srch:'' };
+
+function renderLog() {
+  const c = document.getElementById('content');
+  if (LOG_STATE.sel) { c.innerHTML = renderLogDetail(); return; }
+
+  const cats=['HVAC','Plumbing','Electrical','Fire Safety','Security','Elevator','Roofing','Grounds','Kitchen','AV / Organ','General'];
+  const filt = STATE.log.filter(e=>
+    (LOG_STATE.fBl==='All'||e.building===LOG_STATE.fBl) &&
+    (LOG_STATE.fCt==='All'||e.category===LOG_STATE.fCt) &&
+    (!LOG_STATE.srch||[e.description,e.vendor_name,e.location,e.equipment_name,e.invoice_number,e.completed_by].some(f=>f?.toLowerCase().includes(LOG_STATE.srch.toLowerCase())))
+  );
+  const spend = filt.reduce((s,e)=>s+parseFloat(e.cost||0),0);
+
+  // If draft waiting, show form automatically
+  if (STATE.draft && !LOG_STATE.showForm) LOG_STATE.showForm = true;
+
+  c.innerHTML = `
+    ${STATE.draft&&!LOG_STATE.showForm ? `<div class="alert" style="background:#FEF9EC;border:1px solid #F0C040;margin-bottom:16px">
+      <div class="alert-body"><span class="alert-icon">📋</span><div><div class="alert-title" style="color:#B7770D">New log entry ready to review</div><div class="alert-sub">Auto-generated from closed work order — edit and save.</div></div></div>
+      <button class="btn btn-gold btn-sm" onclick="LOG_STATE.showForm=true;renderLog()">Review & Save →</button>
+    </div>` : ''}
+    <div class="stat-row">
+      ${sccard('Total Entries',STATE.log.length,'#1B3A5C','')}
+      ${sccard('Filtered',filt.length,'#1B6CA8','')}
+      ${sccard('Filtered Spend','$'+spend.toLocaleString(),'#B8942A','')}
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+      <input value="${LOG_STATE.srch}" oninput="LOG_STATE.srch=this.value;renderLog()" placeholder="🔍 Search..." style="padding:7px 10px;border-radius:6px;border:1px solid #DDD;font-size:13px;width:180px"/>
+      <select onchange="LOG_STATE.fBl=this.value;renderLog()" style="padding:7px 10px;border-radius:6px;border:1px solid #DDD;font-size:13px">
+        <option value="All">All Buildings</option>
+        ${STATE.buildings.map(b=>`<option value="${b.id}" ${LOG_STATE.fBl===b.id?'selected':''}>${b.name}</option>`).join('')}
+      </select>
+      <select onchange="LOG_STATE.fCt=this.value;renderLog()" style="padding:7px 10px;border-radius:6px;border:1px solid #DDD;font-size:13px">
+        <option value="All">All Categories</option>
+        ${cats.map(cat=>`<option value="${cat}" ${LOG_STATE.fCt===cat?'selected':''}>${cat}</option>`).join('')}
+      </select>
+      <button class="btn btn-navy btn-sm" style="margin-left:auto" onclick="LOG_STATE.showForm=true;renderLog()">+ Add Entry</button>
+    </div>
+    ${LOG_STATE.showForm ? renderLogForm() : ''}
+    <div class="tbl">
+      <div class="tbl-head" style="grid-template-columns:90px 1fr 140px 80px 70px">
+        <div>Date</div><div>Description</div><div>Building</div><div>Cost</div><div>Invoice</div>
+      </div>
+      ${filt.length===0?'<div class="loading">No entries match.</div>':''}
+      ${filt.map((e,i)=>`
+        <div class="tbl-row" style="grid-template-columns:90px 1fr 140px 80px 70px" onclick="LOG_STATE.sel=STATE.log.find(x=>x.id==='${e.id}');renderLog()">
+          <div style="font-size:12px;color:#555">${fmtDate(e.date_completed)}</div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:#222;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px">${(e.description||'').slice(0,70)}${(e.description||'').length>70?'…':''}</div>
+            <div style="font-size:11px;color:#AAA">${e.completed_by||''}${e.vendor_name?' · '+e.vendor_name:''}</div>
+          </div>
+          <div style="font-size:12px;color:#555">${e.building_name||"—"}</div>
+          <div style="font-size:12px;font-weight:${parseFloat(e.cost||0)>0?700:400};color:${parseFloat(e.cost||0)>0?'#B8942A':'#AAA'}">${parseFloat(e.cost||0)>0?'$'+parseFloat(e.cost).toLocaleString():'—'}</div>
+          <div style="font-size:11px">${e.invoice_number?`<span style="color:#1B6CA8;font-weight:600">✓</span>`:`<span style="color:#DDD">—</span>`}</div>
+        </div>`).join('')}
+    </div>
+    ${filt.length>0?`<div style="margin-top:8px;display:flex;justify-content:space-between;font-size:11px;color:#AAA"><span>${filt.length} entries</span>${spend>0?`<span>Filtered spend: <strong style="color:#B8942A">$${spend.toLocaleString()}</strong></span>`:''}</div>`:''}`;
+}
+
+function renderLogForm() {
+  const d = STATE.draft;
+  const cats=['HVAC','Plumbing','Electrical','Fire Safety','Security','Elevator','Roofing','Grounds','Kitchen','AV / Organ','General'];
+  const userOpts = ['Jason Snoreck','Parish Office','Contractor'].map(n=>`<option ${n===(d?.completed_by||'Jason Snoreck')?'selected':''}>${n}</option>`).join('');
+  const bldgOpts = STATE.buildings.map(b=>`<option value="${b.id}" ${b.id===d?.building?'selected':''}>${b.name}</option>`).join('');
+  return `
+    <div class="card" style="margin-bottom:20px;border:2px solid #B8942A">
+      <div style="font-weight:700;font-size:15px;color:#1B3A5C;font-family:Georgia,serif;margin-bottom:4px">${d?'Review Auto-Generated Entry':'New Log Entry'}</div>
+      ${d?`<div style="font-size:12px;color:#B8942A;margin-bottom:12px">From closed work order — review and edit before saving.</div>`:''}
+      <div class="form-grid-3" style="margin-bottom:10px">
+        <div class="form-field"><label>Date Completed</label><input type="date" id="lf-date" value="${d?.date_completed||today()}"/></div>
+        <div class="form-field"><label>Completed By</label><select id="lf-by">${userOpts}<option>Contractor</option></select></div>
+        <div class="form-field"><label>Vendor</label><input id="lf-vendor" value="${d?.vendor_name||''}"/></div>
+        <div class="form-field"><label>Building</label><select id="lf-bldg">${bldgOpts}</select></div>
+        <div class="form-field"><label>Category</label><select id="lf-cat">${cats.map(cat=>`<option ${cat===(d?.category||'General')?'selected':''}>${cat}</option>`).join('')}</select></div>
+        <div class="form-field"><label>Location</label><input id="lf-loc" value="${d?.location||''}"/></div>
+        <div class="form-field"><label>Equipment Name</label><input id="lf-eq" value="${d?.equipment_name||''}"/></div>
+        <div class="form-field"><label>Cost ($)</label><input id="lf-cost" value="${d?.cost||'0'}"/></div>
+        <div class="form-field"><label>Invoice Number</label><input id="lf-inv" value="${d?.invoice_number||''}"/></div>
+        <div class="form-field span-full"><label>Invoice URL</label><input id="lf-url" value="${d?.invoice_url||''}" placeholder="https://"/></div>
+        <div class="form-field"><label>Work Order ID</label><input id="lf-wo" value="${d?.work_order_id||''}"/></div>
+      </div>
+      <div class="form-field" style="margin-bottom:10px"><label>Work Description *</label><textarea id="lf-desc" rows="3" placeholder="What was done, found, replaced...">${d?.description||''}</textarea></div>
+      <div class="form-field" style="margin-bottom:14px"><label>Next Service Recommendation</label><input id="lf-next" value="${d?.next_service_note||''}" placeholder="e.g. Re-inspect spring 2027"/></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-green" onclick="saveLogEntry()">✓ Save to Log</button>
+        <button class="btn btn-ghost" onclick="LOG_STATE.showForm=false;STATE.draft=null;renderLog()">Cancel</button>
+      </div>
+    </div>`;
+}
+
+async function saveLogEntry() {
+  const desc = document.getElementById('lf-desc').value.trim();
+  if (!desc) return;
+  try {
+    const rec = await create('log_entries', {
+      site: STATE.currentSite?.id,
+      date_completed: document.getElementById('lf-date').value,
+      completed_by: document.getElementById('lf-by').value,
+      vendor_name: document.getElementById('lf-vendor').value,
+      building_name: STATE.buildings.find(b=>b.id===document.getElementById('lf-bldg').value)?.name||'',
+      category: document.getElementById('lf-cat').value,
+      location: document.getElementById('lf-loc').value,
+      equipment_name: document.getElementById('lf-eq').value,
+      cost: parseFloat(document.getElementById('lf-cost').value||0),
+      invoice_number: document.getElementById('lf-inv').value,
+      invoice_url: document.getElementById('lf-url').value,
+      work_order_id: document.getElementById('lf-wo').value,
+      description: desc,
+      next_service_note: document.getElementById('lf-next').value,
+    });
+    STATE.log.unshift(rec);
+    STATE.draft = null;
+    LOG_STATE.showForm = false;
+    showToast('Log entry saved.');
+    renderLog();
+  } catch(e) { showToast('Error: '+e.message); }
+}
+
+function renderLogDetail() {
+  const e = LOG_STATE.sel;
+  return `
+    ${backBtn("LOG_STATE.sel=null;renderLog()")}
+    <div class="card">
+      <div style="margin-bottom:16px">
+        <div style="font-size:11px;color:#AAA;font-family:monospace">${e.id?.slice(-6)||''}${e.work_order_id?' · from '+e.work_order_id:''}</div>
+        <div style="font-size:18px;font-weight:700;color:#1B3A5C;font-family:Georgia,serif">${e.building_name||"—"} — ${e.category}</div>
+        <div style="font-size:12px;color:#777">${fmtDate(e.date_completed)} · ${e.completed_by}</div>
+      </div>
+      ${infoGrid([['Vendor',e.vendor_name],['Location',e.location],['Equipment',e.equipment_name],['Cost',parseFloat(e.cost||0)>0?'$'+parseFloat(e.cost).toLocaleString():'—'],['Work Order',e.work_order_id],['Category',e.category]])}
+      ${e.invoice_number?`<div style="background:#EBF4FB;border:1px solid #AED6F1;border-radius:6px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">
+        <div><div style="font-size:10px;color:#1B6CA8;font-weight:700;text-transform:uppercase;margin-bottom:2px">Invoice</div><div style="font-size:13px;font-weight:600;color:#1B3A5C">#${e.invoice_number}</div></div>
+        ${e.invoice_url?`<a href="${e.invoice_url}" target="_blank" class="btn btn-navy btn-sm">Open ↗</a>`:''}
+      </div>`:''}
+      <div style="background:#F8F9FA;border-radius:6px;padding:12px 14px;margin-bottom:${e.next_service_note?10:0}px">
+        <div style="font-size:10px;color:#999;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Description</div>
+        <div style="font-size:13px;color:#333;line-height:1.7">${e.description}</div>
+      </div>
+      ${e.next_service_note?`<div style="background:#EAFAF1;border:1px solid #A9DFBF;border-radius:6px;padding:10px 14px;margin-top:10px">
+        <div style="font-size:10px;color:#1E8449;font-weight:700;text-transform:uppercase;margin-bottom:2px">Next Service Note</div>
+        <div style="font-size:13px;color:#1E8449">${e.next_service_note}</div>
+      </div>`:''}
+    </div>`;
+}
+
+// ── INVENTORY ─────────────────────────────────────────────────────────────────
+let INV_STATE = { sel: null, fCt:'All', fBl:'All', showForm: false };
+
+function renderInventory() {
+  const c = document.getElementById('content');
+  if (INV_STATE.sel) { c.innerHTML = renderInvDetail(); return; }
+
+  const list = STATE.inventory.filter(e=>
+    (INV_STATE.fCt==='All'||e.category===INV_STATE.fCt) &&
+    (INV_STATE.fBl==='All'||e.building===INV_STATE.fBl)
+  );
+  const ovCnt = STATE.inventory.filter(e=>e.next_service&&du(e.next_service)<0).length;
+  const snCnt = STATE.inventory.filter(e=>e.next_service&&du(e.next_service)>=0&&du(e.next_service)<=30).length;
+  const cats = ['HVAC','Elevator','Fire Safety','Plumbing','Electrical','Grounds','Security','AV / Organ','General'];
+
+  c.innerHTML = `
+    <div class="stat-row">
+      ${sccard('Total Equipment',STATE.inventory.length,'#1B3A5C','')}
+      ${sccard('Overdue',ovCnt,ovCnt>0?'#C0392B':'#27AE60','')}
+      ${sccard('Due ≤30d',snCnt,snCnt>0?'#D35400':'#1B3A5C','')}
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center">
+      <select onchange="INV_STATE.fCt=this.value;renderInventory()" style="padding:7px 10px;border-radius:6px;border:1px solid #DDD;font-size:13px">
+        <option value="All">All Categories</option>
+        ${cats.map(cat=>`<option value="${cat}" ${INV_STATE.fCt===cat?'selected':''}>${cat}</option>`).join('')}
+      </select>
+      <select onchange="INV_STATE.fBl=this.value;renderInventory()" style="padding:7px 10px;border-radius:6px;border:1px solid #DDD;font-size:13px">
+        <option value="All">All Buildings</option>
+        ${STATE.buildings.map(b=>`<option value="${b.id}" ${INV_STATE.fBl===b.id?'selected':''}>${b.name}</option>`).join('')}
+      </select>
+      <button class="btn btn-navy btn-sm" style="margin-left:auto" onclick="INV_STATE.showForm=!INV_STATE.showForm;renderInventory()">${INV_STATE.showForm?'✕ Cancel':'+ Add Equipment'}</button>
+    </div>
+    ${INV_STATE.showForm ? renderInvForm() : ''}
+    <div class="tbl">
+      <div class="tbl-head" style="grid-template-columns:1fr 90px 140px 110px 80px">
+        <div>Equipment</div><div>Category</div><div>Building</div><div>Next Service</div><div>Status</div>
+      </div>
+      ${list.map((e,i)=>{
+        const d=e.next_service?du(e.next_service):null,isOv=d!==null&&d<0,isSn=d!==null&&d>=0&&d<=30;
+        return `<div class="tbl-row" style="grid-template-columns:1fr 90px 140px 110px 80px;background:${isOv?'#FFF9F9':i%2===0?'#fff':'#FAFAFA'}" onclick="INV_STATE.sel=STATE.inventory.find(x=>x.id==='${e.id}');renderInventory()">
+          <div><div style="font-size:13px;font-weight:600;color:#222">${e.name}</div><div style="font-size:11px;color:#AAA">${e.make||''} ${e.model||''}</div></div>
+          <div style="font-size:12px;color:#555">${e.category}</div>
+          <div style="font-size:12px;color:#555">${e.building_name||"—"}</div>
+          <div style="font-size:12px;font-weight:${isOv||isSn?700:400};color:${isOv?'#C0392B':isSn?'#D35400':'#555'}">${fmtDate(e.next_service)}</div>
+          <div style="font-size:11px;font-weight:700;color:${isOv?'#C0392B':isSn?'#D35400':'#27AE60'}">${isOv?'OVERDUE':isSn?'DUE SOON':'OK'}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function renderInvForm() {
+  const cats=['HVAC','Elevator','Fire Safety','Plumbing','Electrical','Grounds','Security','AV / Organ','General'];
+  return `
+    <div class="card" style="margin-bottom:16px">
+      <div style="font-weight:700;font-size:15px;color:#1B3A5C;margin-bottom:14px">Add Equipment</div>
+      <div class="form-grid-2" style="margin-bottom:10px">
+        <div class="form-field span-full"><label>Name *</label><input id="eq-name"/></div>
+        <div class="form-field"><label>Category</label><select id="eq-cat">${cats.map(c=>`<option>${c}</option>`).join('')}</select></div>
+        <div class="form-field"><label>Building</label><select id="eq-bldg">${STATE.buildings.map(b=>`<option value="${b.id}">${b.name}</option>`).join('')}</select></div>
+        <div class="form-field"><label>Make</label><input id="eq-make"/></div>
+        <div class="form-field"><label>Model</label><input id="eq-model"/></div>
+        <div class="form-field"><label>Serial</label><input id="eq-serial"/></div>
+        <div class="form-field"><label>Vendor</label><input id="eq-vendor"/></div>
+        <div class="form-field"><label>Next Service</label><input type="date" id="eq-next"/></div>
+        <div class="form-field span-full"><label>Notes</label><textarea id="eq-notes" rows="2"></textarea></div>
+      </div>
+      <div style="display:flex;gap:8px"><button class="btn btn-green" onclick="saveEquipment()">Save</button><button class="btn btn-ghost" onclick="INV_STATE.showForm=false;renderInventory()">Cancel</button></div>
+    </div>`;
+}
+
+async function saveEquipment() {
+  const name = document.getElementById('eq-name').value.trim();
+  if (!name) return;
+  try {
+    const rec = await create('inventory', {
+      site: STATE.currentSite?.id, name,
+      category: document.getElementById('eq-cat').value,
+      building_name: STATE.buildings.find(b=>b.id===document.getElementById('eq-bldg').value)?.name||'',
+      make: document.getElementById('eq-make').value,
+      model: document.getElementById('eq-model').value,
+      serial: document.getElementById('eq-serial').value,
+      vendor_name: document.getElementById('eq-vendor').value,
+      next_service: document.getElementById('eq-next').value,
+      notes: document.getElementById('eq-notes').value,
+    });
+    STATE.inventory.unshift(rec);
+    INV_STATE.showForm = false;
+    showToast('Equipment added.');
+    renderInventory();
+  } catch(e) { showToast('Error: '+e.message); }
+}
+
+function renderInvDetail() {
+  const e = INV_STATE.sel;
+  const d=e.next_service?du(e.next_service):null,isOv=d!==null&&d<0,isSn=d!==null&&d>=0&&d<=30;
+  return `
+    ${backBtn("INV_STATE.sel=null;renderInventory()")}
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+        <div>
+          <div style="font-size:11px;color:#AAA;font-family:monospace">${e.id?.slice(-6)||''}</div>
+          <div style="font-size:18px;font-weight:700;color:#1B3A5C;font-family:Georgia,serif">${e.name}</div>
+          <div style="font-size:12px;color:#777">${e.make||''} ${e.model||''}</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          ${isOv?`<span style="background:#FDEDEC;color:#C0392B;border-radius:4px;padding:3px 9px;font-size:12px;font-weight:700">⚠ OVERDUE</span>`:''}
+          ${isSn&&!isOv?`<span style="background:#FEF0E7;color:#D35400;border-radius:4px;padding:3px 9px;font-size:12px;font-weight:700">DUE SOON</span>`:''}
+        </div>
+      </div>
+      ${infoGrid([['Building',e.building_name||"—"],['Location',e.location],['Serial',e.serial],['Vendor',e.vendor_name],['Last Service',fmtDate(e.last_service)],['Next Service',fmtDate(e.next_service)]])}
+      ${e.notes?`<div style="background:#F8F9FA;border-radius:6px;padding:12px 14px;margin-bottom:10px"><div style="font-size:10px;color:#999;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Notes</div><div style="font-size:13px;color:#333">${e.notes}</div></div>`:''}
+      ${e.next_service?`<div><div style="font-size:11px;font-weight:700;color:#555;margin-bottom:4px">ADD SERVICE TO CALENDAR</div>${calButtons('Service Due: '+e.name,e.next_service,'Service Due: '+e.name+(e.vendor_name?' — '+e.vendor_name:'')+(e.notes?' — '+e.notes:''),bldgName(e.building)||'St. Francis of Assisi')}</div>`:''}
+    </div>`;
+}
+
+// ── CALENDAR ──────────────────────────────────────────────────────────────────
+let CAL_STATE = { yr: new Date().getFullYear(), mo: new Date().getMonth(), selEv: null };
+const TC = {Service:'#1B6CA8',Inspection:'#C0392B',Internal:'#27AE60','Contractor Visit':'#8E44AD'};
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function renderCalendar() {
+  const {yr,mo} = CAL_STATE;
+  const f1=new Date(yr,mo,1).getDay(),dim=new Date(yr,mo+1,0).getDate();
+  const cells=[...new Array(f1).fill(null),...Array.from({length:dim},(_,i)=>i+1)];
+  while(cells.length%7!==0)cells.push(null);
+  const ms=`${yr}-${String(mo+1).padStart(2,'0')}`;
+  const upcoming=STATE.events.filter(e=>du(e.date)>=0).sort((a,b)=>new Date(a.date)-new Date(b.date)).slice(0,6);
+
+  return `
+    <div style="display:grid;grid-template-columns:1fr 260px;gap:20px">
+      <div>
+        <div style="background:#fff;border-radius:10px;border:1px solid #E8E8E8;overflow:hidden">
+          <div style="background:#1B3A5C;padding:12px 18px;display:flex;align-items:center;justify-content:space-between">
+            <button onclick="CAL_STATE.mo===0?(CAL_STATE.mo=11,CAL_STATE.yr--):CAL_STATE.mo--;document.getElementById('content').innerHTML=renderCalendar()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer">‹</button>
+            <div style="color:#fff;font-weight:700;font-size:15px;font-family:Georgia,serif">${MONTHS[mo]} ${yr}</div>
+            <button onclick="CAL_STATE.mo===11?(CAL_STATE.mo=0,CAL_STATE.yr++):CAL_STATE.mo++;document.getElementById('content').innerHTML=renderCalendar()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer">›</button>
+          </div>
+          <div class="cal-grid" style="border-bottom:1px solid #E8E8E8">
+            ${['Su','Mo','Tu','We','Th','Fr','Sa'].map(d=>`<div style="padding:6px 0;text-align:center;font-size:11px;font-weight:700;color:#999">${d}</div>`).join('')}
+          </div>
+          <div class="cal-grid">
+            ${cells.map(day=>{
+              if(!day)return`<div class="cal-day empty"></div>`;
+              const ds=`${ms}-${String(day).padStart(2,'0')}`;
+              const devs=STATE.events.filter(e=>e.date&&e.date.startsWith(ds));
+              const isT=ds===today();
+              return `<div class="cal-day ${isT?'today':''}">
+                <div class="cal-num ${isT?'today':''}">${day}</div>
+                ${devs.slice(0,2).map(ev=>`<div class="cal-evt" style="background:${TC[ev.type]||'#1B6CA8'}" onclick="CAL_STATE.selEv=STATE.events.find(x=>x.id==='${ev.id}');document.getElementById('content').innerHTML=renderCalendar()">${ev.title}</div>`).join('')}
+                ${devs.length>2?`<div style="font-size:9px;color:#999">+${devs.length-2}</div>`:''}
+              </div>`;
+            }).join('')}
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap">
+          ${Object.entries(TC).map(([t,c])=>`<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:#555"><div style="width:10px;height:10px;border-radius:2px;background:${c}"></div>${t}</div>`).join('')}
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <button class="btn btn-navy" onclick="showAddEvent()" style="width:100%;padding:9px 0">+ Add Event</button>
+        <div class="card">
+          <div class="card-title">Upcoming</div>
+          ${upcoming.map(e=>{const d=du(e.date);return `
+            <div onclick="CAL_STATE.selEv=STATE.events.find(x=>x.id==='${e.id}');document.getElementById('content').innerHTML=renderCalendar()" style="padding:7px 0;border-bottom:1px solid #F0F0F0;cursor:pointer;display:flex;justify-content:space-between;align-items:flex-start">
+              <div style="flex:1"><div style="font-size:12px;font-weight:600;color:#222">${e.title}</div><div style="font-size:10px;color:#AAA">${e.vendor_name||'Internal'}</div></div>
+              <div style="text-align:right;margin-left:8px"><div style="font-size:11px;font-weight:700;color:${d<=7?'#C0392B':d<=14?'#D35400':'#555'}">${fmtDate(e.date)}</div><div style="font-size:10px;color:#AAA">${d===0?'Today':d+'d'}</div></div>
+            </div>`;}).join('')}
+        </div>
+      </div>
+    </div>
+    ${CAL_STATE.selEv?`
+      <div class="modal-overlay" onclick="CAL_STATE.selEv=null;document.getElementById('content').innerHTML=renderCalendar()">
+        <div class="modal" onclick="event.stopPropagation()">
+          <div style="display:flex;justify-content:space-between;margin-bottom:12px">
+            <div class="modal-title">${CAL_STATE.selEv.title}</div>
+            <button onclick="CAL_STATE.selEv=null;document.getElementById('content').innerHTML=renderCalendar()" style="background:none;border:none;font-size:16px;cursor:pointer;color:#AAA">✕</button>
+          </div>
+          ${[['Date',fmtDate(CAL_STATE.selEv.date)],['Type',CAL_STATE.selEv.type],['Building',CAL_STATE.selEv.building_scope||'All'],['Vendor',CAL_STATE.selEv.vendor_name||'—'],['Notes',CAL_STATE.selEv.notes||'—']].map(([l,v])=>`<div style="display:flex;gap:10px;margin-bottom:6px"><div style="font-size:11px;color:#999;width:50px;flex-shrink:0;font-weight:700">${l}</div><div style="font-size:13px;color:#333">${v}</div></div>`).join('')}
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid #F0F0F0">
+            <div style="font-size:10px;font-weight:700;color:#999;margin-bottom:6px">ADD TO CALENDAR</div>
+            ${calButtons(CAL_STATE.selEv.title,CAL_STATE.selEv.date,(CAL_STATE.selEv.type+': '+CAL_STATE.selEv.title+(CAL_STATE.selEv.vendor_name?' — '+CAL_STATE.selEv.vendor_name:'')+(CAL_STATE.selEv.notes?' — '+CAL_STATE.selEv.notes:'')),('St. Francis of Assisi — '+(CAL_STATE.selEv.building_scope||'All Buildings')))}
+          </div>
+        </div>
+      </div>`:''}`;
+}
+
+function showAddEvent() {
+  document.getElementById('content').innerHTML = `
+    ${backBtn("document.getElementById('content').innerHTML=renderCalendar()")}
+    <div class="card" style="max-width:480px">
+      <div style="font-size:16px;font-weight:700;color:#1B3A5C;font-family:Georgia,serif;margin-bottom:16px">Add Calendar Event</div>
+      <div class="form-grid">
+        <div class="form-field"><label>Title *</label><input id="ev-title"/></div>
+        <div class="form-field"><label>Date *</label><input type="date" id="ev-date"/></div>
+        <div class="form-field"><label>Type</label><select id="ev-type"><option>Service</option><option>Inspection</option><option>Internal</option><option>Contractor Visit</option></select></div>
+        <div class="form-field"><label>Vendor</label><input id="ev-vendor"/></div>
+        <div class="form-field"><label>Notes</label><textarea id="ev-notes" rows="2"></textarea></div>
+        <button class="btn btn-gold" onclick="saveEvent()">Save Event</button>
+      </div>
+    </div>`;
+}
+
+async function saveEvent() {
+  const title = document.getElementById('ev-title').value.trim();
+  const date = document.getElementById('ev-date').value;
+  if(!title||!date) return;
+  try {
+    const rec = await create('events', {
+      site: STATE.currentSite?.id, title, date,
+      type: document.getElementById('ev-type').value,
+      vendor_name: document.getElementById('ev-vendor').value,
+      building_scope: 'All',
+      notes: document.getElementById('ev-notes').value,
+    });
+    STATE.events.push(rec);
+    showToast('Event added.');
+    document.getElementById('content').innerHTML = renderCalendar();
+  } catch(e) { showToast('Error: '+e.message); }
+}
+
+// ── REPORTING HUB ─────────────────────────────────────────────────────────────
+function renderReportingHub() {
+  if (STATE.activeReport === 'pastor') return renderPastorReport();
+  if (STATE.activeReport === 'finance') return renderFinanceReport();
+  if (STATE.activeReport === 'admin') return renderAdminReport();
+
+  const cards = [
+    {id:'pastor',icon:'⛪',title:"Pastor's Report",audience:'Bishop Fedek',color:'#1B3A5C',desc:'Monthly facilities summary. Safety incidents, building issues, checklist completion, inspections, contractor spend.',sections:['P1/P2 Incidents','Issues by Building','Checklist Completion','Upcoming Inspections','Contractor Spend','Open Work Orders']},
+    {id:'finance',icon:'💰',title:'Finance Council Report',audience:'Finance Council',color:'#27AE60',desc:'Financial and compliance overview. Spend tracking, year-over-year comparison, mandatory inspection deadlines.',sections:['Spend by Vendor','Spend by Category','YoY Comparison','Work Orders by Category','Upcoming Inspections','Overdue Equipment']},
+    {id:'admin',icon:'📋',title:'Parish Administrator Report',audience:'Parish Administrator',color:'#8E44AD',desc:'Operational overview. Open items, assignments, and near-term deadlines.',sections:['Open WOs by Building','Unassigned Work Orders','Checklist Status','Equipment Due for Service','Upcoming Contractor Visits']},
+  ];
+  return `
+    <div style="font-size:14px;color:#777;margin-bottom:24px">Select a report to view, print, or save as PDF.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px">
+      ${cards.map(r=>`
+        <div style="background:#fff;border-radius:12px;border:1px solid #E8E8E8;overflow:hidden;display:flex;flex-direction:column">
+          <div style="background:${r.color};padding:20px 22px">
+            <div style="font-size:28px;margin-bottom:6px">${r.icon}</div>
+            <div style="font-size:16px;font-weight:800;color:#fff;font-family:Georgia,serif">${r.title}</div>
+            <div style="font-size:11px;color:#ffffff99;margin-top:3px;font-weight:600;text-transform:uppercase;letter-spacing:0.07em">For ${r.audience}</div>
+          </div>
+          <div style="padding:18px 22px;flex:1">
+            <div style="font-size:13px;color:#555;line-height:1.6;margin-bottom:14px">${r.desc}</div>
+            ${r.sections.map(s=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px"><div style="width:6px;height:6px;border-radius:50%;background:${r.color};flex-shrink:0"></div><div style="font-size:12px;color:#444">${s}</div></div>`).join('')}
+          </div>
+          <div style="padding:0 22px 20px"><button class="btn" style="width:100%;background:${r.color};color:#fff;border-radius:7px;padding:11px 0;font-size:13px;font-weight:700" onclick="STATE.activeReport='${r.id}';document.getElementById('content').innerHTML=render${r.id.charAt(0).toUpperCase()+r.id.slice(1)}Report()">Generate Report →</button></div>
+        </div>`).join('')}
+    </div>`;
+}
+
+function reportShell(title, color, body) {
+  const site = STATE.currentSite?.name || 'St. Francis of Assisi Catholic Parish';
+  return `
+    <div class="report-overlay">
+      <div class="report-bar" style="background:${color}">
+        <div class="report-bar-title">${title} — ${mlbl()}</div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-sm" style="background:rgba(0,0,0,0.25);color:#fff" onclick="window.print()">🖨 Print / PDF</button>
+          <button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:#fff" onclick="STATE.activeReport=null;navTo('reporting')">✕ Close</button>
+        </div>
+      </div>
+      <div class="report-body">
+        <div class="report-page">
+          <div class="report-header" style="border-bottom:3px solid ${color}">
+            <div class="report-kicker" style="color:${color}">${site} — Orland Park, IL</div>
+            <div class="report-title">${title}</div>
+            <div class="report-meta">${mlbl()} · Jason Snoreck · (708) 269-7148 · ${fmtDate(today())}</div>
+          </div>
+          ${body}
+          <div class="report-footer" style="border-top:2px solid ${color}">
+            <span>${site} · Chapel v5.0</span>
+            <span>Jason Snoreck · (708) 269-7148</span>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function rh2(text, color) { return `<div class="report-h2" style="border-bottom:2px solid ${color||'#B8942A'}">${text}</div>`; }
+function rOK(text) { return `<div class="report-ok">${text||'✓ None to report.'}</div>`; }
+function rCards(items) { return `<div class="report-cards">${items.map(([l,v,c])=>`<div class="report-card"><div class="report-card-val" style="color:${c||'#1B3A5C'}">${v}</div><div class="report-card-lbl">${l}</div></div>`).join('')}</div>`; }
+
+function renderPastorReport() {
+  const mp=mpfx(),mO=STATE.orders.filter(o=>o.date_reported?.startsWith(mp));
+  const open=STATE.orders.filter(o=>o.status==='Open'),closed=STATE.orders.filter(o=>o.status==='Closed'&&o.date_reported?.startsWith(mp));
+  const p12=STATE.orders.filter(o=>(o.priority==='P1'||o.priority==='P2')&&o.date_reported?.startsWith(mp));
+  const mSpend=mO.reduce((s,o)=>s+parseFloat(o.cost||0),0),ytd=STATE.orders.reduce((s,o)=>s+parseFloat(o.cost||0),0);
+  const vSpend={};mO.forEach(o=>{if(o.vendor_name&&o.cost)vSpend[o.vendor_name]=(vSpend[o.vendor_name]||0)+parseFloat(o.cost);});
+  const doneC=STATE.checks.filter(c=>c.status==='Completed').length,rate=STATE.checks.length?Math.round(doneC/STATE.checks.length*100):0;
+  const up60=STATE.events.filter(e=>{const d=du(e.date);return d>=0&&d<=60&&e.type==='Inspection';});
+  const ovEq=STATE.inventory.filter(e=>e.next_service&&du(e.next_service)<0);
+
+  const body = `
+    ${rh2('1 · Emergency & Urgent Incidents')}
+    ${p12.length===0?rOK('✓ No P1 or P2 incidents this period.'):p12.map(o=>`<div class="report-alert" style="background:#FDEDEC;border:1px solid #C0392B44"><div style="font-weight:700;font-size:13px;font-family:sans-serif">${o.title}</div><div style="font-size:12px;color:#555;font-family:sans-serif">${o.building_name||"—"} · ${fmtDate(o.date_reported)} · ${o.status}${o.cost>0?' · $'+parseFloat(o.cost).toLocaleString():''}</div></div>`).join('')}
+    ${rh2('2 · Issues by Building')}
+    <table style="width:100%;border-collapse:collapse;font-family:sans-serif;font-size:12px;margin-bottom:8px">
+      <thead><tr style="background:#1B3A5C;color:#fff">${['Building','Opened','Closed','Open'].map(h=>`<th style="padding:7px 10px;text-align:left;font-size:11px">${h}</th>`).join('')}</tr></thead>
+      <tbody>
+        ${STATE.buildings.map((b,i)=>{const op=open.filter(o=>o.building===b.id).length,cl=closed.filter(o=>o.building===b.id).length,opnd=mO.filter(o=>o.building===b.id).length;return `<tr style="background:${i%2===0?'#fff':'#F8F9FA'}"><td style="padding:7px 10px;font-weight:600;color:#1B3A5C">${b.name}</td><td style="padding:7px 10px">${opnd||'—'}</td><td style="padding:7px 10px;color:#27AE60;font-weight:${cl?700:400}">${cl||'—'}</td><td style="padding:7px 10px;color:${op>0?'#C0392B':'#27AE60'};font-weight:${op?700:400}">${op||'—'}</td></tr>`;}).join('')}
+        <tr style="background:#E8E8E8;font-weight:700"><td style="padding:7px 10px">TOTAL</td><td style="padding:7px 10px">${mO.length}</td><td style="padding:7px 10px;color:#27AE60">${closed.length}</td><td style="padding:7px 10px;color:${open.length>0?'#C0392B':'#27AE60'}">${open.length}</td></tr>
+      </tbody>
+    </table>
+    ${rh2('3 · Checklist Completion')}
+    ${rCards([['Rate',rate+'%',rate>=80?'#27AE60':'#D35400'],['Done',doneC+'/'+STATE.checks.length,'#1B3A5C'],['Remaining',STATE.checks.length-doneC,STATE.checks.length-doneC>0?'#D35400':'#27AE60']])}
+    ${STATE.checks.map(c=>`<div class="report-row"><span style="font-family:sans-serif">${c.title}</span>${spill(c.status)}</div>`).join('')}
+    ${rh2('4 · Overdue & Upcoming Inspections (60 days)')}
+    ${ovEq.map(e=>`<div class="report-alert" style="background:#FDEDEC;border:1px solid #C0392B44"><div style="font-weight:700;font-size:13px;font-family:sans-serif">${e.name}</div><div style="font-size:12px;color:#555;font-family:sans-serif">Was due ${fmtDate(e.next_service)} · ${e.vendor_name||'—'}</div></div>`).join('')}
+    ${up60.length===0&&ovEq.length===0?rOK('✓ No inspections overdue or due within 60 days.'):up60.map(e=>`<div class="report-row"><div><div style="font-family:sans-serif;font-weight:600">${e.title}</div><div style="font-family:sans-serif;font-size:11px;color:#AAA">${e.vendor_name}</div></div><div style="font-family:sans-serif;font-weight:700;color:${du(e.date)<=14?'#C0392B':'#D35400'}">${fmtDate(e.date)} (${du(e.date)}d)</div></div>`).join('')}
+    ${rh2('5 · Contractor Spend')}
+    ${rCards([['This Month','$'+mSpend.toLocaleString(),'#B8942A'],['Year to Date','$'+ytd.toLocaleString(),'#1B3A5C']])}
+    ${Object.keys(vSpend).length===0?rOK('No contractor costs this month.'):Object.entries(vSpend).sort((a,b)=>b[1]-a[1]).map(([v,a])=>`<div class="report-row"><span style="font-family:sans-serif">${v}</span><span style="font-weight:700;color:#B8942A;font-family:sans-serif">$${a.toLocaleString()}</span></div>`).join('')}
+    ${rh2('6 · Open Work Orders')}
+    ${open.length===0?rOK('✓ No open work orders.'):`<table style="width:100%;border-collapse:collapse;font-family:sans-serif;font-size:11px"><thead><tr style="background:#1B3A5C;color:#fff">${['Issue','Building','Priority','Assigned'].map(h=>`<th style="padding:6px 8px;text-align:left">${h}</th>`).join('')}</tr></thead><tbody>${open.map((o,i)=>`<tr style="background:${i%2===0?'#fff':'#F8F9FA'}"><td style="padding:6px 8px;font-weight:600">${o.title}</td><td style="padding:6px 8px">${o.building_name||"—"}</td><td style="padding:6px 8px">${pbadge(o.priority)}</td><td style="padding:6px 8px">${o.assignee||'—'}</td></tr>`).join('')}</tbody></table>`}`;
+
+  return reportShell('Facilities Management Report','#1B3A5C',body);
+}
+
+function renderFinanceReport() {
+  const mp=mpfx(),mO=STATE.orders.filter(o=>o.date_reported?.startsWith(mp));
+  const allCost=STATE.orders.filter(o=>o.cost&&parseFloat(o.cost)>0);
+  const mSpend=mO.reduce((s,o)=>s+parseFloat(o.cost||0),0);
+  const ytd26=allCost.filter(o=>o.date_reported?.startsWith('2026')).reduce((s,o)=>s+parseFloat(o.cost),0);
+  const ytd25=allCost.filter(o=>o.date_reported?.startsWith('2025')).reduce((s,o)=>s+parseFloat(o.cost),0);
+  const vSpend={},catSpend={},catCount={};
+  mO.forEach(o=>{if(o.vendor_name&&o.cost)vSpend[o.vendor_name]=(vSpend[o.vendor_name]||0)+parseFloat(o.cost);});
+  allCost.forEach(o=>{const c=o.category||'General';catSpend[c]=(catSpend[c]||0)+parseFloat(o.cost);});
+  mO.forEach(o=>{const c=o.category||'General';catCount[c]=(catCount[c]||0)+1;});
+  const mandatory=STATE.events.filter(e=>{const d=du(e.date);return d>=0&&d<=90&&e.type==='Inspection';});
+  const ovEq=STATE.inventory.filter(e=>e.next_service&&du(e.next_service)<0);
+  const ytdTotal=allCost.reduce((s,o)=>s+parseFloat(o.cost),0);
+
+  const body = `
+    ${rCards([['This Month','$'+mSpend.toLocaleString(),'#27AE60'],['YTD 2026','$'+ytd26.toLocaleString(),'#1B3A5C'],['YTD 2025','$'+ytd25.toLocaleString(),'#777'],['YoY',ytd25>0?(((ytd26-ytd25)/ytd25)*100).toFixed(0)+'%':'-',ytd26>ytd25?'#C0392B':'#27AE60']])}
+    ${rh2('1 · Spend by Vendor — This Month','#27AE60')}
+    ${Object.keys(vSpend).length===0?rOK('No contractor costs this month.'):Object.entries(vSpend).sort((a,b)=>b[1]-a[1]).map(([v,a])=>`<div class="report-row"><span style="font-family:sans-serif">${v}</span><span style="font-weight:700;color:#27AE60;font-family:sans-serif">$${a.toLocaleString()}</span></div>`).join('')}
+    ${rh2('2 · Spend by Category — Year to Date','#27AE60')}
+    ${Object.keys(catSpend).length===0?rOK():Object.entries(catSpend).sort((a,b)=>b[1]-a[1]).map(([cat,a])=>{const pct=ytdTotal>0?Math.round(a/ytdTotal*100):0;return`<div style="margin-bottom:8px;font-family:sans-serif"><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:13px">${cat}</span><span style="font-weight:700;color:#1B3A5C;font-size:13px">$${a.toLocaleString()} <span style="color:#AAA;font-weight:400">(${pct}%)</span></span></div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:#27AE60"></div></div></div>`;}).join('')}
+    ${rh2('3 · Year-over-Year Comparison','#27AE60')}
+    <table style="width:100%;border-collapse:collapse;font-family:sans-serif;font-size:13px;margin-bottom:8px">
+      <thead><tr style="background:#1B3A5C;color:#fff">${['Period','Spend','Work Orders','Notes'].map(h=>`<th style="padding:7px 10px;text-align:left;font-size:11px">${h}</th>`).join('')}</tr></thead>
+      <tbody>
+        <tr><td style="padding:8px 10px;font-weight:600;color:#1B3A5C">YTD 2026</td><td style="padding:8px 10px;font-weight:700;color:#27AE60">$${ytd26.toLocaleString()}</td><td style="padding:8px 10px">${STATE.orders.filter(o=>o.date_reported?.startsWith('2026')).length}</td><td style="padding:8px 10px;color:#777;font-size:11px">Current year</td></tr>
+        <tr style="background:#F8F9FA"><td style="padding:8px 10px;font-weight:600;color:#1B3A5C">YTD 2025</td><td style="padding:8px 10px;font-weight:700;color:#777">$${ytd25.toLocaleString()}</td><td style="padding:8px 10px">${STATE.orders.filter(o=>o.date_reported?.startsWith('2025')).length}</td><td style="padding:8px 10px;color:#777;font-size:11px">Prior year</td></tr>
+        <tr style="background:#E8F8F5"><td style="padding:8px 10px;font-weight:700">Change</td><td style="padding:8px 10px;font-weight:700;color:${ytd26>ytd25?'#C0392B':'#27AE60'}">${ytd25>0?(((ytd26-ytd25)/ytd25)*100).toFixed(1)+'%':'—'}</td><td style="padding:8px 10px">—</td><td style="padding:8px 10px;color:#777;font-size:11px">${ytd26>ytd25?'Increase vs prior year':'Decrease vs prior year'}</td></tr>
+      </tbody>
+    </table>
+    ${rh2('4 · Work Orders by Category — This Month','#27AE60')}
+    ${Object.keys(catCount).length===0?rOK('No work orders this month.'):Object.entries(catCount).sort((a,b)=>b[1]-a[1]).map(([cat,n])=>`<div class="report-row"><span style="font-family:sans-serif">${cat}</span><span style="font-weight:700;color:#1B3A5C;font-family:sans-serif">${n} order${n!==1?'s':''}</span></div>`).join('')}
+    ${rh2('5 · Upcoming Mandatory Inspections (90 Days)','#27AE60')}
+    ${mandatory.length===0?rOK('No mandatory inspections due within 90 days.'):mandatory.map(e=>{const d=du(e.date);return`<div class="report-row"><div><div style="font-family:sans-serif;font-weight:600">${e.title}</div><div style="font-family:sans-serif;font-size:11px;color:#AAA">${bldgName(e.building_scope)||'All'} · ${e.vendor_name||'—'}</div></div><div style="text-align:right;font-family:sans-serif"><div style="font-weight:700;color:${d<=30?'#C0392B':'#D35400'}">${fmtDate(e.date)}</div><div style="font-size:11px;color:#AAA">${d}d away</div></div></div>`;}).join('')}
+    ${rh2('6 · Overdue Equipment Service','#27AE60')}
+    ${ovEq.length===0?rOK('✓ No equipment overdue for service.'):ovEq.map(e=>`<div class="report-alert" style="background:#FDEDEC;border:1px solid #C0392B44"><div style="font-weight:700;font-size:13px;font-family:sans-serif">${e.name}</div><div style="font-size:12px;color:#555;font-family:sans-serif">${e.building_name||"—"} · Service was due ${fmtDate(e.next_service)} · ${e.vendor_name||'—'}</div></div>`).join('')}`;
+
+  return reportShell('Finance Council Report','#27AE60',body);
+}
+
+function renderAdminReport() {
+  const open=STATE.orders.filter(o=>o.status==='Open');
+  const unassigned=open.filter(o=>!o.assignee);
+  const p12open=open.filter(o=>o.priority==='P1'||o.priority==='P2');
+  const invOv=STATE.inventory.filter(e=>e.next_service&&du(e.next_service)<0);
+  const invSn=STATE.inventory.filter(e=>e.next_service&&du(e.next_service)>=0&&du(e.next_service)<=30);
+  const visits=STATE.events.filter(e=>{const d=du(e.date);return d>=0&&d<=14&&e.type==='Contractor Visit';});
+
+  const body = `
+    ${rCards([['Open Issues',open.length,open.length>0?'#C0392B':'#27AE60'],['Unassigned',unassigned.length,unassigned.length>0?'#D35400':'#27AE60'],['P1/P2 Open',p12open.length,p12open.length>0?'#C0392B':'#27AE60'],['Equip. Overdue',invOv.length,invOv.length>0?'#C0392B':'#27AE60']])}
+    ${p12open.length>0?`<div class="report-alert" style="background:#FDEDEC;border:1px solid #C0392B44;margin-bottom:16px"><div style="font-weight:700;color:#C0392B;margin-bottom:6px;font-family:sans-serif">⚠ Urgent / Emergency Issues Require Attention</div>${p12open.map(o=>`<div style="font-size:13px;margin-bottom:4px;font-family:sans-serif"><strong>${o.title}</strong> <span style="color:#AAA">(${o.building_name||"—"})</span></div>`).join('')}</div>`:''}
+    ${rh2('1 · Open Work Orders by Building','#8E44AD')}
+    ${STATE.buildings.map(b=>{const items=open.filter(o=>o.building===b.id);if(!items.length)return'';return`<div style="margin-bottom:16px"><div style="font-family:sans-serif;font-weight:700;color:#8E44AD;font-size:13px;margin-bottom:6px">${b.name} — ${items.length} open</div><table style="width:100%;border-collapse:collapse;font-family:sans-serif;font-size:12px"><thead><tr style="background:#F3E5F5">${['Issue','Priority','Assigned To'].map(h=>`<th style="padding:5px 8px;text-align:left;font-size:11px;color:#555">${h}</th>`).join('')}</tr></thead><tbody>${items.map((o,i)=>`<tr style="background:${i%2===0?'#fff':'#F8F9FA'}"><td style="padding:6px 8px;font-weight:600">${o.title}</td><td style="padding:6px 8px">${pbadge(o.priority)}</td><td style="padding:6px 8px;color:${o.assignee?'#333':'#C0392B'};font-weight:${o.assignee?400:700}">${o.assignee||'⚠ Unassigned'}</td></tr>`).join('')}</tbody></table></div>`;}).join('')||rOK('✓ No open work orders.')}
+    ${rh2('2 · Unassigned Work Orders','#8E44AD')}
+    ${unassigned.length===0?rOK('✓ All open work orders are assigned.'):unassigned.map(o=>`<div class="report-row"><div><div style="font-family:sans-serif;font-weight:600;color:#C0392B">${o.title}</div><div style="font-family:sans-serif;font-size:11px;color:#AAA">${o.building_name||"—"} · ${fmtDate(o.date_reported)}</div></div>${pbadge(o.priority)}</div>`).join('')}
+    ${rh2('3 · Checklist Status','#8E44AD')}
+    ${STATE.checks.map(c=>{const ov=c.status==='Upcoming'&&c.due_date<today();return`<div class="report-row"><div><div style="font-family:sans-serif;font-weight:600;color:${ov?'#C0392B':'#222'}">${c.title}</div><div style="font-family:sans-serif;font-size:11px;color:#AAA">${c.building_scope||'All'} · Due ${fmtDate(c.due_date)}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">${ov?`<span style="background:#FDEDEC;color:#C0392B;border-radius:4px;padding:2px 7px;font-size:10px;font-weight:700">OVERDUE</span>`:''}${spill(c.status)}</div></div>`;}).join('')}
+    ${rh2('4 · Equipment Due for Service (30 Days)','#8E44AD')}
+    ${invOv.length===0&&invSn.length===0?rOK('✓ No equipment due within 30 days.'):[...invOv,...invSn].map(e=>{const d=du(e.next_service),isOv=d<0;return`<div class="report-alert" style="background:${isOv?'#FDEDEC':'#FFF8E1'};border:1px solid ${isOv?'#C0392B44':'#F0C04044'}"><div style="font-weight:700;font-size:13px;color:${isOv?'#C0392B':'#B7770D'};font-family:sans-serif">${e.name} — ${isOv?'OVERDUE':'Due in '+d+'d'}</div><div style="font-size:12px;color:#555;font-family:sans-serif">${e.building_name||"—"} · ${e.vendor_name||'—'} · ${fmtDate(e.next_service)}</div></div>`;}).join('')}
+    ${rh2('5 · Contractor Visits — Next 14 Days','#8E44AD')}
+    ${visits.length===0?rOK('No contractor visits scheduled in the next 14 days.'):visits.map(e=>`<div class="report-row"><div><div style="font-family:sans-serif;font-weight:600">${e.title}</div><div style="font-family:sans-serif;font-size:11px;color:#AAA">${bldgName(e.building_scope)} · ${e.vendor_name||'Internal'}</div></div><div style="font-family:sans-serif;font-weight:700;color:${du(e.date)<=7?'#C0392B':'#D35400'}">${fmtDate(e.date)}</div></div>`).join('')}`;
+
+  return reportShell('Parish Administrator Report','#8E44AD',body);
+}
+
+// ── VENDORS ────────────────────────────────────────────────────────────────────
+function renderVendors() {
+  return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    ${STATE.vendors.map(v=>`
+      <div style="background:#fff;border-radius:10px;border:1px solid #E8E8E8;padding:16px 18px">
+        <div style="font-size:10px;color:#B8942A;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px">${v.trade}</div>
+        <div style="font-size:14px;font-weight:700;color:#1B3A5C;margin-bottom:7px">${v.company}</div>
+        ${v.phone?`<div style="font-size:13px;color:#555;margin-bottom:3px">📞 ${v.phone}</div>`:''}
+        ${v.web?`<div style="font-size:12px;color:#1B6CA8">🌐 ${v.web}</div>`:''}
+        ${v.notes?`<div style="margin-top:8px;font-size:11px;color:#AAA;background:#F8F9FA;padding:3px 7px;border-radius:4px;display:inline-block">${v.notes}</div>`:''}
+      </div>`).join('')}
+    ${STATE.vendors.length===0?'<div class="loading">No vendors found for this site.</div>':''}
+  </div>`;
+}
+
+// ── REPORT ISSUE ──────────────────────────────────────────────────────────────
+function renderReportIssue() {
+  return `
+    <div style="max-width:560px">
+      <div style="background:#1B3A5C;border-radius:10px;padding:18px 22px;margin-bottom:20px;color:#fff">
+        <div style="font-size:15px;font-weight:700;font-family:Georgia,serif;margin-bottom:4px">Report a Facilities Issue</div>
+        <div style="font-size:13px;color:#ffffff99">Staff, volunteers, or parishioners — goes directly to Jason Snoreck.</div>
+      </div>
+      <div class="card">
+        <div class="form-grid">
+          <div class="form-field"><label>Brief description *</label><input id="ri-title" placeholder="e.g. Leaking pipe under sink in Room 104"/></div>
+          <div class="form-grid-2">
+            <div class="form-field"><label>Building</label><select id="ri-bldg">${STATE.buildings.map(b=>`<option value="${b.id}">${b.name}</option>`).join('')}</select></div>
+            <div class="form-field"><label>Urgency</label><select id="ri-pri"><option value="P3">P3 — Routine</option><option value="P1">P1 — Emergency</option><option value="P2">P2 — Urgent</option></select></div>
+          </div>
+          <div class="form-field"><label>Location (optional)</label><input id="ri-loc" placeholder="e.g. 2nd floor women's restroom"/></div>
+          <div class="form-field"><label>Full description *</label><textarea id="ri-desc" rows="4" placeholder="What did you observe?"></textarea></div>
+          <div class="form-grid-2">
+            <div class="form-field"><label>Your name (optional)</label><input id="ri-name" placeholder="Anonymous if blank"/></div>
+            <div class="form-field"><label>Phone or email (optional)</label><input id="ri-contact" placeholder="For follow-up"/></div>
+          </div>
+          <div id="ri-emerg" style="display:none;background:#FDEDEC;border-radius:6px;padding:10px 14px;font-size:13px;color:#C0392B;font-weight:600">🚨 For emergencies — call 911 first, then Jason Snoreck at (708) 269-7148.</div>
+          <button class="btn btn-gold" onclick="submitIssue()">Submit Issue Report</button>
+        </div>
+      </div>
+    </div>
+    <script>document.getElementById('ri-pri').addEventListener('change',function(){document.getElementById('ri-emerg').style.display=this.value==='P1'?'block':'none';});<\/script>`;
+}
+
+async function submitIssue() {
+  const title = document.getElementById('ri-title').value.trim();
+  const desc = document.getElementById('ri-desc').value.trim();
+  if(!title||!desc) return;
+  try {
+    const rec = await create('work_orders', {
+      site: STATE.currentSite?.id,
+      title, location: document.getElementById('ri-loc').value,
+      building: document.getElementById('ri-bldg').value,
+      priority: document.getElementById('ri-pri').value,
+      status: 'Open', category: 'General',
+      reporter: document.getElementById('ri-name').value || 'Anonymous',
+      date_reported: today(), notes: desc, cost: 0, assignee:'',
+    });
+    STATE.orders.unshift(rec);
+    showToast('Issue reported! Thank you.');
+    navTo('dashboard');
+  } catch(e) { showToast('Error: '+e.message); }
+}
+
+// ── SETTINGS ──────────────────────────────────────────────────────────────────
+// ── USER MANAGEMENT STATE ─────────────────────────────────────────────────────
+let USER_STATE = { view:'list', sel:null, authUsers:[], profiles:[] };
+
+async function loadUserManagement() {
+  const [authRes, profileRes] = await Promise.all([
+    api('GET', 'collections/chapel_auth/records?perPage=200'),
+    api('GET', 'collections/user_profiles/records?perPage=200'),
+  ]);
+  USER_STATE.authUsers = authRes?.items || [];
+  USER_STATE.profiles = profileRes?.items || [];
+}
+
+function roleBadge(role) {
+  const c = role==='admin'?{bg:'#1B3A5C15',color:'#1B3A5C'}:role==='staff'?{bg:'#1B6CA815',color:'#1B6CA8'}:{bg:'#F8F9FA',color:'#777'};
+  return `<span style="background:${c.bg};color:${c.color};border-radius:4px;padding:2px 7px;font-size:11px;font-weight:700">${role||'readonly'}</span>`;
+}
+
+function siteBadges(siteAccess) {
+  if (!siteAccess) return '<span style="color:#AAA;font-size:11px">None</span>';
+  return siteAccess.split(',').map(s => s.trim()).filter(Boolean).map(s =>
+    `<span style="background:#EBF4FB;color:#1B6CA8;border-radius:3px;padding:1px 6px;font-size:10px;font-weight:700;margin-right:3px">${s}</span>`
+  ).join('');
+}
+
+async function renderSettings() {
+  if (!isAdmin()) {
+    return `<div class="card" style="max-width:480px">
+      <div style="background:#1B3A5C;border-radius:10px;padding:20px;color:#fff">
+        <div style="font-weight:700;font-size:14px;color:#B8942A;margin-bottom:12px;font-family:Georgia,serif">System Information</div>
+        ${[['Current Site',STATE.currentSite?.name||'All Sites'],['Your Role',STATE.user?.role||'—'],['Version','Chapel v5.0']].map(([l,v])=>`<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px"><span style="color:#ffffff99">${l}</span><span style="font-weight:600;color:#fff">${v}</span></div>`).join('')}
+        <div style="margin-top:16px"><button class="btn btn-ghost" onclick="localStorage.clear();location.reload()" style="font-size:12px">Sign Out</button></div>
+      </div>
+    </div>`;
+  }
+
+  // Load user data
+  await loadUserManagement();
+
+  if (USER_STATE.view === 'add') return renderAddUser();
+  if (USER_STATE.view === 'edit') return renderEditUser();
+
+  // Match auth users to profiles
+  const rows = USER_STATE.authUsers.map(u => ({
+    auth: u,
+    profile: USER_STATE.profiles.find(p => p.auth_email?.toLowerCase() === u.email?.toLowerCase())
+  }));
+
+  const unmatched = rows.filter(r => !r.profile).length;
+
+  return `
+    <div style="max-width:780px">
+      ${unmatched > 0 ? `<div style="background:#FEF9EC;border:1px solid #F0C040;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-weight:700;color:#B7770D">⚠ ${unmatched} user${unmatched!==1?'s':''} without a profile</div><div style="font-size:12px;color:#777">These users can log in but won't have correct name, role, or site access.</div></div>
+        <button class="btn btn-gold btn-sm" onclick="syncUsers()">Auto-Fix →</button>
+      </div>` : ''}
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div style="font-size:16px;font-weight:700;color:#1B3A5C;font-family:Georgia,serif">Users & Access</div>
+        ${isAdmin() ? `<button class="btn btn-navy btn-sm" onclick="USER_STATE.view='add';document.getElementById('content').innerHTML=renderAddUser()">+ Add User</button>` : ''}
+      </div>
+
+      <div class="tbl" style="margin-bottom:24px">
+        <div class="tbl-head" style="grid-template-columns:1fr 90px 160px 120px 80px">
+          <div>Name</div><div>Role</div><div>Sites</div><div>Email</div><div>Actions</div>
+        </div>
+        ${rows.map((r,i) => {
+          const p = r.profile;
+          const hasProfile = !!p;
+          return `<div class="tbl-row" style="grid-template-columns:1fr 90px 160px 120px 80px;cursor:default;background:${!hasProfile?'#FFFDF0':i%2===0?'#fff':'#FAFAFA'}">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:#222">${p?.display_name||r.auth.email.split('@')[0]}</div>
+              ${!hasProfile ? '<div style="font-size:10px;color:#B7770D;font-weight:700">⚠ No profile</div>' : ''}
+            </div>
+            <div>${roleBadge(p?.role)}</div>
+            <div>${siteBadges(p?.site_access)}</div>
+            <div style="font-size:11px;color:#777;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.auth.email}</div>
+            <div style="display:flex;gap:4px">
+              ${hasProfile ? `<button class="btn btn-ghost btn-xs" onclick="USER_STATE.sel=${JSON.stringify({authId:r.auth.id,profileId:p.id,email:r.auth.email,display_name:p.display_name,role:p.role,site_access:p.site_access,phone:p.phone||'',active:p.active}).replace(/"/g,"'")};USER_STATE.view='edit';document.getElementById('content').innerHTML=renderEditUser()">Edit</button>` : ''}
+              ${hasProfile && p.active ? `<button class="btn btn-xs" style="background:#FDEDEC;color:#C0392B;border:none" onclick="deactivateUser('${p.id}')">Off</button>` : ''}
+              ${hasProfile && !p.active ? `<button class="btn btn-xs" style="background:#EAFAF1;color:#27AE60;border:none" onclick="activateUser('${p.id}')">On</button>` : ''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+
+      <div style="background:#1B3A5C;border-radius:10px;padding:20px;color:#fff">
+        <div style="font-weight:700;font-size:14px;color:#B8942A;margin-bottom:12px;font-family:Georgia,serif">System Information</div>
+        ${[['PocketBase URL',window.location.origin+'/api'],['Current Site',STATE.currentSite?.name||'All Sites'],['Sites Configured',STATE.sites.length],['Version','Chapel v5.0 — Live PocketBase Edition']].map(([l,v])=>`<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px"><span style="color:#ffffff99">${l}</span><span style="font-weight:600;color:#fff">${v}</span></div>`).join('')}
+        <div style="margin-top:16px"><button class="btn btn-ghost" onclick="localStorage.clear();location.reload()" style="font-size:12px">Sign Out</button></div>
+      </div>
+    </div>`;
+}
+
+function renderAddUser() {
+  const siteChecks = STATE.sites.map(s =>
+    `<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+      <input type="checkbox" id="au-site-${s.code}" value="${s.code}"/> ${s.short_name||s.name}
+    </label>`
+  ).join('');
+
+  return `
+    <button class="back-btn" onclick="USER_STATE.view='list';navTo('settings')">← Back to Users</button>
+    <div class="card" style="max-width:560px">
+      <div style="font-size:16px;font-weight:700;color:#1B3A5C;font-family:Georgia,serif;margin-bottom:16px">Add New User</div>
+      <div class="form-grid" style="gap:12px">
+        <div class="form-field"><label>Full Name *</label><input id="au-name" placeholder="e.g. Mary Kowalski"/></div>
+        <div class="form-field"><label>Email Address *</label><input type="email" id="au-email" placeholder="mary@sfaorland.org"/></div>
+        <div class="form-field"><label>Temporary Password *</label><input type="password" id="au-password" placeholder="They can change it later"/></div>
+        <div class="form-field"><label>Phone</label><input id="au-phone" placeholder="(708) 555-1234"/></div>
+        <div class="form-field"><label>Role</label>
+          <select id="au-role">
+            <option value="readonly">Read Only — view only, no changes</option>
+            <option value="staff">Staff — can create and edit work orders</option>
+            <option value="admin">Admin — full access</option>
+          </select>
+        </div>
+        <div class="form-field"><label>Site Access</label>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid #DDD;border-radius:6px;background:#F8F9FA">
+            ${siteChecks}
+          </div>
+        </div>
+        <button class="btn btn-green" onclick="createUser()">✓ Create User</button>
+      </div>
+    </div>`;
+}
+
+function renderEditUser() {
+  const u = USER_STATE.sel;
+  if (!u) return '';
+  const currentSites = (u.site_access||'').split(',').map(s=>s.trim());
+  const siteChecks = STATE.sites.map(s =>
+    `<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+      <input type="checkbox" id="eu-site-${s.code}" value="${s.code}" ${currentSites.includes(s.code)?'checked':''}/> ${s.short_name||s.name}
+    </label>`
+  ).join('');
+
+  return `
+    <button class="back-btn" onclick="USER_STATE.view='list';navTo('settings')">← Back to Users</button>
+    <div class="card" style="max-width:560px">
+      <div style="font-size:16px;font-weight:700;color:#1B3A5C;font-family:Georgia,serif;margin-bottom:4px">Edit User</div>
+      <div style="font-size:12px;color:#AAA;margin-bottom:16px">${u.email}</div>
+      <div class="form-grid" style="gap:12px">
+        <div class="form-field"><label>Full Name *</label><input id="eu-name" value="${u.display_name||''}"/></div>
+        <div class="form-field"><label>Phone</label><input id="eu-phone" value="${u.phone||''}"/></div>
+        <div class="form-field"><label>Role</label>
+          <select id="eu-role">
+            <option value="readonly" ${u.role==='readonly'?'selected':''}>Read Only</option>
+            <option value="staff" ${u.role==='staff'?'selected':''}>Staff</option>
+            <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
+          </select>
+        </div>
+        <div class="form-field"><label>Site Access</label>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid #DDD;border-radius:6px;background:#F8F9FA">
+            ${siteChecks}
+          </div>
+        </div>
+        <div class="form-field"><label>New Password <span style="color:#AAA;font-weight:400">(leave blank to keep current)</span></label>
+          <input type="password" id="eu-password" placeholder="Only fill in to change password"/>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-green" onclick="saveEditUser()">✓ Save Changes</button>
+          <button class="btn btn-ghost" onclick="USER_STATE.view='list';navTo('settings')">Cancel</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function createUser() {
+  const name     = document.getElementById('au-name').value.trim();
+  const email    = document.getElementById('au-email').value.trim();
+  const password = document.getElementById('au-password').value;
+  const phone    = document.getElementById('au-phone').value.trim();
+  const role     = document.getElementById('au-role').value;
+  const sites    = STATE.sites.filter(s => document.getElementById('au-site-'+s.code)?.checked).map(s=>s.code).join(',');
+
+  if (!name || !email || !password) { showToast('Name, email, and password are required.'); return; }
+  if (!sites) { showToast('Select at least one site.'); return; }
+
+  try {
+    // Create chapel_auth record
+    await api('POST', 'collections/chapel_auth/records', {
+      email, password, passwordConfirm: password
+    });
+
+    // Create user_profiles record
+    await api('POST', 'collections/user_profiles/records', {
+      auth_email: email, display_name: name,
+      role, site_access: sites, phone, active: true
+    });
+
+    showToast(`✓ ${name} added successfully.`);
+    USER_STATE.view = 'list';
+    navTo('settings');
+  } catch(e) {
+    showToast('Error: ' + e.message);
+  }
+}
+
+async function saveEditUser() {
+  const u       = USER_STATE.sel;
+  const name    = document.getElementById('eu-name').value.trim();
+  const phone   = document.getElementById('eu-phone').value.trim();
+  const role    = document.getElementById('eu-role').value;
+  const sites   = STATE.sites.filter(s => document.getElementById('eu-site-'+s.code)?.checked).map(s=>s.code).join(',');
+  const newPass = document.getElementById('eu-password').value;
+
+  if (!name) { showToast('Name is required.'); return; }
+  if (!sites) { showToast('Select at least one site.'); return; }
+
+  try {
+    // Update user_profiles
+    await update('user_profiles', u.profileId, {
+      display_name: name, role, site_access: sites, phone
+    });
+
+    // Update password if provided
+    if (newPass) {
+      await update('chapel_auth', u.authId, {
+        password: newPass, passwordConfirm: newPass
+      });
+    }
+
+    showToast(`✓ ${name} updated.`);
+    USER_STATE.view = 'list';
+    navTo('settings');
+  } catch(e) {
+    showToast('Error: ' + e.message);
+  }
+}
+
+async function deactivateUser(profileId) {
+  await update('user_profiles', profileId, { active: false });
+  showToast('User deactivated.');
+  navTo('settings');
+}
+
+async function activateUser(profileId) {
+  await update('user_profiles', profileId, { active: true });
+  showToast('User activated.');
+  navTo('settings');
+}
+
+async function syncUsers() {
+  await loadUserManagement();
+  const unmatched = USER_STATE.authUsers.filter(u =>
+    !USER_STATE.profiles.find(p => p.auth_email?.toLowerCase() === u.email?.toLowerCase())
+  );
+  let count = 0;
+  for (const u of unmatched) {
+    const displayName = u.email.split('@')[0].split(' ').map(w=>w?w[0].toUpperCase()+w.slice(1):'').join(' ');
+    await api('POST', 'collections/user_profiles/records', {
+      auth_email: u.email, display_name: displayName,
+      role: 'readonly', site_access: 'SFA', phone: '', active: true
+    });
+    count++;
+  }
+  showToast(`✓ Created ${count} missing profile${count!==1?'s':''}. Update roles and sites as needed.`);
+  navTo('settings');
+}
+
+// ── MOBILE NAV ───────────────────────────────────────────────────────────────
+const DEFAULT_SHORTCUTS = ['dashboard','orders','checklists','supply','report','calendar'];
+
+function getMobAllItems() {
+  const cartCount = STATE.cart.reduce((s,i) => s+i.qty, 0);
+  const openOrders = (STATE.orders||[]).filter(o=>o.status==='Open').length;
+  return [
+    { id:'dashboard',  icon:'⌂',  label:'Dashboard' },
+    { id:'orders',     icon:'≡',  label:'Work Orders', badge: openOrders||null },
+    { id:'queue',      icon:'⏳', label:'Queue' },
+    { id:'recurring',  icon:'🔁', label:'Schedules' },
+    { id:'checklists', icon:'✓',  label:'Checklists' },
+    { id:'log',        icon:'📓', label:'Maint. Log' },
+    { id:'inventory',  icon:'⚙',  label:'Inventory' },
+    { id:'calendar',   icon:'📅', label:'Calendar' },
+    { id:'reporting',  icon:'📊', label:'Reports' },
+    { id:'vendors',    icon:'☎',  label:'Vendors' },
+    { id:'report',     icon:'↗',  label:'Report Issue' },
+    { id:'settings',   icon:'⚙️', label:'Settings' },
+    { id:'supply',     icon:'📦', label:'Supply', external:'/supply.html' },
+  ];
+}
+
+function buildMobileNav() {
+  const shortcutsEl = document.getElementById('mobile-nav-shortcuts');
+  const dropdown = document.getElementById('mob-nav-content');
+  if (!shortcutsEl || !dropdown) return;
+
+  const shortcuts = JSON.parse(localStorage.getItem('chapel_shortcuts') || 'null') || DEFAULT_SHORTCUTS;
+  const allItems = getMobAllItems();
+
+  // Build shortcut buttons
+  shortcutsEl.innerHTML = shortcuts.map(id => {
+    const n = allItems.find(x => x.id === id);
+    if (!n) return '';
+    const isActive = STATE.view === n.id;
+    if (n.external) {
+      return '<a href="' + n.external + '" class="mob-shortcut" title="' + n.label + '">' + n.icon + '</a>';
+    }
+    return '<button class="mob-shortcut ' + (isActive?'active':'') + '" onclick="mobileNavTo(\'' + n.id + '\')" title="' + n.label + '">' +
+      n.icon +
+      (n.badge ? '<span class="mob-shortcut-badge">' + n.badge + '</span>' : '') +
+    '</button>';
+  }).join('') +
+  '<button class="mob-more-btn" onclick="toggleMobileNav()" title="More">⋯</button>';
+
+  // Build full dropdown menu
+  const sections = [
+    { label:'Facilities', ids:['dashboard','orders','queue','recurring','checklists','log','inventory','calendar','reporting','vendors','report','settings'] },
+    { label:'Supply', ids:['supply'] },
+  ];
+
+  dropdown.innerHTML = sections.map(section => {
+    const items = section.ids.map(id => allItems.find(x => x.id === id)).filter(Boolean);
+    return '<div class="mob-nav-grid">' +
+      '<div class="mob-nav-section">' + section.label + '</div>' +
+      items.map(n => {
+        if (n.external) {
+          return '<a href="' + n.external + '" class="mob-nav-item" style="text-decoration:none">' +
+            '<span class="mob-icon">' + n.icon + '</span>' +
+            '<span>' + n.label + '</span>' +
+          '</a>';
+        }
+        return '<button class="mob-nav-item ' + (STATE.view===n.id?'active':'') + '" onclick="mobileNavTo(\'' + n.id + '\')">' +
+          '<span class="mob-icon">' + n.icon + '</span>' +
+          '<span>' + n.label + '</span>' +
+          (n.badge ? '<span class="mob-nav-badge">' + n.badge + '</span>' : '') +
+        '</button>';
+      }).join('') +
+    '</div>';
+  }).join('');
+
+  const nameEl = document.getElementById('mob-user-name');
+  if (nameEl) nameEl.textContent = STATE.user ? STATE.user.name : 'User';
+
+  // Build mobile site switcher
+  const mobSite = document.getElementById('mobile-site-switcher');
+  if (mobSite) {
+    const visibleSites = STATE.allowedSites || STATE.sites;
+    const isAdminUser = STATE.user && STATE.user.role === 'admin';
+    if (visibleSites.length > 1) {
+      mobSite.innerHTML = '<select onchange="switchSite(this.value)" style="background:rgba(255,255,255,0.12);color:#fff;border:1px solid rgba(255,255,255,0.25);border-radius:6px;padding:4px 8px;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;max-width:110px">' +
+        (isAdminUser ? '<option value="ALL" ' + (!STATE.currentSite?'selected':'') + '>All Sites</option>' : '') +
+        visibleSites.map(s => '<option value="' + s.id + '" ' + (STATE.currentSite?.id===s.id?'selected':'') + '>' + (s.short_name||s.code) + '</option>').join('') +
+      '</select>';
+    } else {
+      mobSite.innerHTML = '<span style="color:#ffffff88;font-size:12px;font-weight:600">' + (STATE.currentSite?.short_name||STATE.currentSite?.code||'') + '</span>';
+    }
+  }
+}
+
+function toggleMobileNav() {
+  const dropdown = document.getElementById('mobile-nav-dropdown');
+  if (!dropdown) return;
+  const isOpen = dropdown.classList.contains('open');
+  if (isOpen) {
+    dropdown.classList.remove('open');
+  } else {
+    buildMobileNav();
+    dropdown.classList.add('open');
+  }
+}
+
+function mobileNavTo(id) {
+  const dropdown = document.getElementById('mobile-nav-dropdown');
+  if (dropdown) dropdown.classList.remove('open');
+  navTo(id);
+  buildMobileNav(); // refresh shortcut active states
+}
+
+// ── STARTUP ────────────────────────────────────────────────────────────────────
+// Check if already logged in
+if (STATE.token && STATE.user) {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('content').innerHTML = '<div class="loading"><div class="spinner"></div><br>Loading Chapel...</div>';
+  initApp().catch(() => {
+    localStorage.clear();
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+  });
+}
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.log('Chapel SW registered:', reg.scope))
+      .catch(err => console.log('SW registration failed:', err));
+  });
+}
+</script>
+</body>
+</html>
