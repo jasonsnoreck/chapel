@@ -1,10 +1,14 @@
 import { signIn, signUp } from "@/lib/actions/auth";
+import { createClient } from "@/lib/supabase/server";
 
-export default function LoginPage({
+export default async function LoginPage({
   searchParams,
 }: {
   searchParams: { error?: string; notice?: string; next?: string };
 }) {
+  const supabase = createClient();
+  const { data: founderExists } = await supabase.rpc("founder_exists");
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-paper px-4">
       <div className="w-full max-w-sm">
@@ -22,37 +26,42 @@ export default function LoginPage({
           </p>
         )}
 
-        <form action={signIn} className="card space-y-3">
-          <input type="hidden" name="next" value={searchParams.next ?? "/"} />
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted">Email</label>
-            <input className="input" type="email" name="email" required autoComplete="email" />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted">Password</label>
-            <input className="input" type="password" name="password" required autoComplete="current-password" />
-          </div>
-          <button type="submit" className="btn w-full">
-            Sign in
-          </button>
-        </form>
-
-        <details className="mt-4">
-          <summary className="cursor-pointer text-xs text-muted">First time? Create the founder account</summary>
-          <form action={signUp} className="card mt-2 space-y-3">
+        {founderExists ? (
+          <form action={signIn} className="card space-y-3">
+            <input type="hidden" name="next" value={searchParams.next ?? "/"} />
             <div>
               <label className="mb-1 block text-xs font-medium text-muted">Email</label>
               <input className="input" type="email" name="email" required autoComplete="email" />
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-muted">Password</label>
-              <input className="input" type="password" name="password" required minLength={6} autoComplete="new-password" />
+              <input className="input" type="password" name="password" required autoComplete="current-password" />
             </div>
-            <button type="submit" className="btn-secondary w-full">
-              Create account
+            <button type="submit" className="btn w-full">
+              Sign in
             </button>
           </form>
-        </details>
+        ) : (
+          <div className="space-y-3">
+            <p className="rounded-md border border-line bg-white px-3 py-2 text-sm text-muted">
+              Atlas has no founder account yet. Set one up below — this only works once; after this
+              account is created, Atlas becomes single-user and no further signups are possible.
+            </p>
+            <form action={signUp} className="card space-y-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted">Email</label>
+                <input className="input" type="email" name="email" required autoComplete="email" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted">Password</label>
+                <input className="input" type="password" name="password" required minLength={6} autoComplete="new-password" />
+              </div>
+              <button type="submit" className="btn w-full">
+                Create the founder account
+              </button>
+            </form>
+          </div>
+        )}
       </div>
     </div>
   );

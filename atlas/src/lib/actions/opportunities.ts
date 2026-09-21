@@ -104,9 +104,24 @@ export async function updateOpportunity(id: string, formData: FormData) {
   revalidatePath("/opportunities");
 }
 
+// Status (lifecycle) and attention (founder's current focus) stay
+// separate columns — that distinction is deliberate, not something to
+// collapse. But a terminal status and active attention shouldn't drift
+// out of sync: without this, "Archive"/"Kill" from the Inbox only touched
+// status, leaving attention at whatever it was (often "watch"), so the
+// opportunity kept inflating the dashboard's Watch/Later counts forever.
+// This mirrors the pairing setProjectStatus already does when a project
+// graduates/is killed and cascades to its parent opportunity below.
+const TERMINAL_STATUSES: OpportunityStatus[] = ["archived", "killed", "graduated"];
+
 export async function setOpportunityStatus(id: string, status: OpportunityStatus) {
   const supabase = createClient();
-  const { error } = await supabase.from("opportunities").update({ status }).eq("id", id);
+  const update: { status: OpportunityStatus; attention?: AttentionState } = { status };
+  if (TERMINAL_STATUSES.includes(status)) {
+    update.attention = "archived";
+  }
+
+  const { error } = await supabase.from("opportunities").update(update).eq("id", id);
   if (error) throw new Error(error.message);
 
   revalidatePath(`/opportunities/${id}`);

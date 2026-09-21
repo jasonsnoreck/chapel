@@ -209,8 +209,11 @@ create index if not exists decisions_investor_profile_idx on public.decisions (i
 create index if not exists decisions_investment_mandate_idx on public.decisions (investment_mandate_id);
 
 -- ---------------------------------------------------------------------
--- RLS — same single-founder "any authenticated user" policy as the rest
--- of V0.1. created_by is recorded on every row for a future multi-user
+-- RLS — same single-founder policy as the rest of V0.1: only is_founder()
+-- (see 0001_init.sql), not merely anyone authenticated. This matters more
+-- here than anywhere else in the schema, since investor_profiles and
+-- investment_mandates can hold real people's contact details and deal
+-- terms. created_by is recorded on every row for a future multi-user
 -- tightening, same as elsewhere.
 -- ---------------------------------------------------------------------
 alter table public.feature_flags enable row level security;
@@ -220,22 +223,22 @@ alter table public.investment_mandates enable row level security;
 alter table public.approved_structures enable row level security;
 alter table public.professional_reviews enable row level security;
 
-create policy "feature_flags_authenticated_read" on public.feature_flags
-  for select using (auth.role() = 'authenticated');
-create policy "feature_flags_authenticated_write" on public.feature_flags
-  for update using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+create policy "feature_flags_founder_read" on public.feature_flags
+  for select using (public.is_founder());
+create policy "feature_flags_founder_write" on public.feature_flags
+  for update using (public.is_founder()) with check (public.is_founder());
 
-create policy "assets_authenticated_all" on public.assets
-  for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+create policy "assets_founder_all" on public.assets
+  for all using (public.is_founder()) with check (public.is_founder());
 
-create policy "investor_profiles_authenticated_all" on public.investor_profiles
-  for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+create policy "investor_profiles_founder_all" on public.investor_profiles
+  for all using (public.is_founder()) with check (public.is_founder());
 
-create policy "investment_mandates_authenticated_all" on public.investment_mandates
-  for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+create policy "investment_mandates_founder_all" on public.investment_mandates
+  for all using (public.is_founder()) with check (public.is_founder());
 
-create policy "approved_structures_authenticated_all" on public.approved_structures
-  for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+create policy "approved_structures_founder_all" on public.approved_structures
+  for all using (public.is_founder()) with check (public.is_founder());
 
-create policy "professional_reviews_authenticated_all" on public.professional_reviews
-  for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+create policy "professional_reviews_founder_all" on public.professional_reviews
+  for all using (public.is_founder()) with check (public.is_founder());

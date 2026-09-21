@@ -41,11 +41,19 @@ root — Chapel is itself one of Atlas's own seed projects.
    - `AI_PROVIDER=mock` to start (no key needed), or `anthropic` +
      `ANTHROPIC_API_KEY` for real AI analysis.
 4. **Create the founder account.** V0.1 is single-user: run `npm install`,
-   `npm run dev`, then open `/login` and use "First time? Create the
-   founder account" to sign up. Supabase's default project settings
-   require email confirmation — either confirm via the email Supabase
-   sends, or disable email confirmation in Supabase Auth settings for
-   local development.
+   `npm run dev`, then open `/login`. Until a founder account exists, the
+   page shows only a one-time setup form; submit it once and Atlas is
+   permanently single-user from then on (see **Security model** below —
+   this isn't just a UI restriction, it's enforced by the database).
+   Supabase's default project settings require email confirmation —
+   either confirm via the email Supabase sends, or disable email
+   confirmation in Supabase Auth settings for local development.
+5. **Recommended (out-of-band, not app code):** once the founder account
+   is created, disable "Allow new user signups" in the Supabase project's
+   Auth settings. The app already refuses to create a second account and
+   RLS already denies a second account any data access even if one is
+   somehow created — this is an extra belt-and-suspenders step at the
+   platform level, not something the app can do for you from code.
 
 ```
 npm install
@@ -94,9 +102,10 @@ Not built, per spec: investor portal, multi-user permissions, public
 website, property analysis, full accounting, banking/payroll
 integrations, CRM, complex portfolio management, automated investment
 decisions, acquisition transaction management, mobile app. The schema
-(`businesses` table, `created_by` on every row, RLS scoped to
-"authenticated" rather than hard-coded to one user) leaves room for these
-without a rewrite, but none of it is implemented now.
+(`businesses` table, `created_by` on every row) leaves room for these
+without a rewrite, but none of it is implemented now — including
+multi-user: V0.1 is hard-scoped to exactly one founder account, see
+**Security model** below.
 
 ## Investor Protocol (architectural foundation only)
 
@@ -158,9 +167,44 @@ real investor relationships without a later rewrite.
   (`prompt.ts`), `providers/mock.ts` and `providers/anthropic.ts`, and a
   factory (`index.ts`) that reads `AI_PROVIDER` from the environment. This
   is the whole surface area a future provider swap touches.
-- RLS policies currently grant full access to any `authenticated` user
-  (single-founder V0.1). `created_by` is recorded on every row so a future
-  multi-user version can tighten policies without a schema change.
+- RLS policies grant access via `is_founder()`, not merely to anyone
+  `authenticated` (see **Security model** below). `created_by` is
+  recorded on every row so a future multi-user version can tighten
+  policies further without a schema change.
+
+## Security model
+
+V0.1 is single-user by design, and that's enforced at the database layer,
+not just the UI:
+
+- **The founder is whoever's profile was created first.** No email or
+  UUID is hard-coded anywhere in source. `public.founder_exists()` and
+  `public.is_founder()` (both defined in `0001_init.sql`) are the only
+  source of truth: `is_founder()` is true only for the `auth.uid()` that
+  matches the earliest-created row in `public.profiles`.
+- **Every RLS policy across both migrations checks `is_founder()`**, not
+  `auth.role() = 'authenticated'`. Being logged in is not, by itself,
+  enough to read or write anything — a second account (however it gets
+  created) gets zero rows back and every write it attempts is rejected by
+  Postgres, not just hidden by the app. This applies identically to the
+  original V0.1 tables and to every Investor Protocol table.
+- **Signup is a one-time bootstrap, not an open door.** The `signUp`
+  server action (`src/lib/actions/auth.ts`) checks `founder_exists()` and
+  refuses to create a second account; the `/login` page only renders the
+  setup form at all when no founder exists yet. This app-level check is a
+  clean error message, not the actual security boundary — RLS enforces
+  the same restriction independently, so even a bypass of the Next.js
+  check (a second account created directly against the Supabase Auth API,
+  for instance) still can't read or write Atlas data.
+- **This is deliberately not RBAC.** There is exactly one privileged
+  identity, defined by "first row in `profiles`," not a role/permission
+  system. That's the right amount of complexity for a single-founder
+  V0.1 — a real multi-user model (`created_by`-scoped policies, roles,
+  invitations) is future work, not something to half-build now.
+- Recommended, but outside what app code can enforce: disable "Allow new
+  user signups" in the Supabase project's Auth settings once the founder
+  account exists, so the underlying Auth API itself stops issuing new
+  accounts, not just this app's own signup form.
 
 ## Known limitations
 

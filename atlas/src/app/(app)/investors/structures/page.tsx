@@ -1,12 +1,10 @@
-import { redirect } from "next/navigation";
-import { getFeatureFlag } from "@/lib/featureFlags";
+import { requireInvestorProtocolEnabled } from "@/lib/featureFlags";
 import { getApprovedStructures, getProfessionalReviewsFor } from "@/lib/queries";
 import { createApprovedStructure, createProfessionalReview, setStructureReviewStatus } from "@/lib/actions/investors";
 import StructureStatusSelect from "@/components/StructureStatusSelect";
 
 export default async function ApprovedStructuresPage() {
-  const flag = await getFeatureFlag("investor_protocol_enabled");
-  if (!flag?.enabled) redirect("/investors");
+  await requireInvestorProtocolEnabled();
 
   const structures = await getApprovedStructures();
   const reviewsByStructure = await Promise.all(structures.map((s) => getProfessionalReviewsFor(s.id)));
@@ -16,9 +14,12 @@ export default async function ApprovedStructuresPage() {
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Approved structures</h1>
         <p className="text-sm text-muted">
-          The app never invents or drafts a legal investment structure. This is a library the
-          founder maintains for internal modeling — a structure is not "Approved" merely because
-          it was created here; that requires a recorded professional review.
+          The app never invents or drafts a legal investment structure, and Atlas does not grant
+          legal approval of one — this library exists so the founder can record structures for
+          internal modeling. A structure cannot be marked "Approved" or "Active" here until a
+          professional review is recorded below it with approval status "Approved"; the founder
+          creating a structure is never enough on its own, and this is enforced, not just
+          suggested by the page order.
         </p>
       </div>
 
@@ -59,7 +60,9 @@ export default async function ApprovedStructuresPage() {
         <p className="text-sm text-muted">No approved structures recorded yet.</p>
       ) : (
         <div className="space-y-3">
-          {structures.map((s, i) => (
+          {structures.map((s, i) => {
+            const hasApprovedReview = reviewsByStructure[i].some((r) => r.approval_status === "approved");
+            return (
             <div key={s.id} className="card space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -68,6 +71,12 @@ export default async function ApprovedStructuresPage() {
                 </div>
                 <StructureStatusSelect value={s.review_status} action={setStructureReviewStatus.bind(null, s.id)} />
               </div>
+              {!hasApprovedReview && (
+                <p className="text-xs text-amber-700">
+                  No review with approval status "Approved" yet — "Approved"/"Active" will be
+                  rejected until one is recorded below.
+                </p>
+              )}
               {s.description && <p className="text-sm text-muted">{s.description}</p>}
               {s.required_fields.length > 0 && (
                 <p className="text-xs text-muted">Required fields: {s.required_fields.join(", ")}</p>
@@ -121,7 +130,8 @@ export default async function ApprovedStructuresPage() {
                 </details>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

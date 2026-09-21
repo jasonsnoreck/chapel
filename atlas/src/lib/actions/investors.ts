@@ -211,8 +211,33 @@ export async function createApprovedStructure(formData: FormData) {
   revalidatePath("/investors/structures");
 }
 
+// "Approved"/"active" here means the founder has recorded that a
+// qualified professional reviewed this structure and approved it — never
+// that Atlas (the app, or the founder alone) is granting legal approval.
+// Enforced server-side, not just suggested by the UI's ordering: without
+// at least one professional_reviews row with approval_status='approved',
+// the transition is rejected outright.
+const STATUSES_REQUIRING_APPROVED_REVIEW: StructureReviewStatus[] = ["approved", "active"];
+
 export async function setStructureReviewStatus(id: string, review_status: StructureReviewStatus) {
   const supabase = createClient();
+
+  if (STATUSES_REQUIRING_APPROVED_REVIEW.includes(review_status)) {
+    const { data: approvedReview, error: reviewError } = await supabase
+      .from("professional_reviews")
+      .select("id")
+      .eq("approved_structure_id", id)
+      .eq("approval_status", "approved")
+      .limit(1)
+      .maybeSingle();
+    if (reviewError) throw new Error(reviewError.message);
+    if (!approvedReview) {
+      throw new Error(
+        `Cannot mark this structure "${review_status}" without a professional review recorded with approval status "approved" first. Record that review below, then try again.`
+      );
+    }
+  }
+
   const { error } = await supabase.from("approved_structures").update({ review_status }).eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/investors/structures");

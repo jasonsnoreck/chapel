@@ -5,8 +5,20 @@
 --
 -- Seed opportunities retain whatever status is actually true today — they
 -- are not automatically treated as approved or active.
+--
+-- Idempotency note: `title`/`name`/`subject` are NOT unique-constrained —
+-- deliberately, so the founder can later create a real opportunity or
+-- principle that happens to share a title with something else without
+-- the database rejecting it. Re-running this file safely (e.g. after a
+-- `supabase db reset` replays every migration) is instead handled with an
+-- explicit `WHERE NOT EXISTS` guard per insert, matched against this
+-- seed's own known rows. That guard only stops *this script* from
+-- reinserting *its own* rows twice; it has no effect on anything the app
+-- itself later creates.
 
-insert into public.principles (title, description, sort_order) values
+insert into public.principles (title, description, sort_order)
+select v.title, v.description, v.sort_order
+from (values
   ('Protect family control', 'Structure decisions so family control of Atlas and its businesses is preserved, even when outside capital or partners are involved.', 10),
   ('Don''t create complexity before it is economically justified', 'Avoid new legal entities, systems, or processes until the business reality actually requires them.', 20),
   ('Ideas can be captured without becoming commitments', 'Capturing an idea in Atlas creates a record, not an obligation. Commitment is a separate, deliberate decision.', 30),
@@ -19,9 +31,14 @@ insert into public.principles (title, description, sort_order) values
   ('Shared infrastructure should create leverage', 'Systems and capabilities built for one business should be reusable by others in the Atlas ecosystem.', 100),
   ('An idea may be valuable even if it does not become a standalone company', 'Some ideas are worth pursuing as features, partnerships, or contributions to an existing business rather than new ventures.', 110),
   ('Do not confuse activity with progress', 'Busywork on an idea is not the same as learning something that changes a decision.', 120)
-on conflict do nothing;
+) as v(title, description, sort_order)
+where not exists (
+  select 1 from public.principles p where p.title = v.title
+);
 
-insert into public.opportunities (title, short_description, category, status, attention, source, tags) values
+insert into public.opportunities (title, short_description, category, status, attention, source, tags)
+select v.title, v.short_description, v.category, v.status, v.attention, v.source, v.tags
+from (values
   ('Soapmaking', 'Handmade soap as a small physical-product business.', 'product', 'captured', 'watch', 'founder', array['physical-product','consumer']),
   ('Mushroom cultivation', 'Growing gourmet/medicinal mushrooms for direct sale.', 'business_idea', 'captured', 'watch', 'founder', array['agriculture','physical-product']),
   ('Mushroom cultivation supplies', 'Selling grow kits and supplies to other mushroom growers instead of selling mushrooms directly.', 'product', 'captured', 'watch', 'founder', array['agriculture','supplies','b2c']),
@@ -29,15 +46,20 @@ insert into public.opportunities (title, short_description, category, status, at
   ('Blue Star', 'Blue Star development opportunity.', 'business_idea', 'captured', 'watch', 'founder', array['development']),
   ('Chapel', 'Chapel — facilities and operations management for St. Francis of Assisi, already in active development in this repository.', 'technology', 'active_project', 'now', 'founder', array['software','existing-build']),
   ('Business acquisition', 'General acquisition lead — evaluating an existing business to buy rather than build.', 'acquisition', 'captured', 'watch', 'founder', array['acquisition'])
-on conflict do nothing;
+) as v(title, short_description, category, status, attention, source, tags)
+where not exists (
+  select 1 from public.opportunities o where o.title = v.title
+);
 
 -- Chapel is the one seed opportunity that has actually graduated to a
 -- project — the app it sits alongside in this repository.
 insert into public.projects (opportunity_id, name, objective, status, next_action)
-select id, 'Chapel development', 'Build and operate the facilities/operations system for St. Francis of Assisi.', 'active', 'Continue feature development on the Chapel PWA.'
-from public.opportunities
-where title = 'Chapel'
-on conflict do nothing;
+select o.id, 'Chapel development', 'Build and operate the facilities/operations system for St. Francis of Assisi.', 'active', 'Continue feature development on the Chapel PWA.'
+from public.opportunities o
+where o.title = 'Chapel'
+and not exists (
+  select 1 from public.projects p where p.name = 'Chapel development'
+);
 
 insert into public.decisions (subject, decision, reasoning, opportunity_id, project_id)
 select
@@ -49,4 +71,8 @@ select
 from public.opportunities o
 join public.projects p on p.opportunity_id = o.id
 where o.title = 'Chapel'
-on conflict do nothing;
+and not exists (
+  select 1 from public.decisions d
+  where d.subject = 'Chapel'
+  and d.decision = 'Move Chapel from idea to active project.'
+);

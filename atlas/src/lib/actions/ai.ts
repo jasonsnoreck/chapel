@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getAIProvider } from "@/lib/ai";
 import {
   getAnalysesFor,
+  getBusinesses,
   getDecisionsFor,
   getNotesFor,
   getOpportunity,
@@ -17,16 +18,20 @@ export async function analyzeOpportunity(opportunityId: string) {
   const opportunity = await getOpportunity(opportunityId);
   if (!opportunity) throw new Error("Opportunity not found");
 
-  const [notes, principles, relevantDecisions, related, allProjects] = await Promise.all([
+  const [notes, principles, relevantDecisions, related, allProjects, allBusinesses] = await Promise.all([
     getNotesFor("opportunity", opportunityId),
     getPrinciples(false),
     getDecisionsFor("opportunity", opportunityId),
     getRelatedItems("opportunity", opportunityId),
     getProjects(),
+    getBusinesses(),
   ]);
 
   const relatedProjectIds = new Set(related.filter((r) => r.type === "project").map((r) => r.id));
   const relatedProjects = allProjects.filter((p) => relatedProjectIds.has(p.id));
+
+  const relatedBusinessIds = new Set(related.filter((r) => r.type === "business").map((r) => r.id));
+  const relatedBusinesses = allBusinesses.filter((b) => relatedBusinessIds.has(b.id));
 
   const provider = getAIProvider();
   const result = await provider.analyzeOpportunity({
@@ -34,7 +39,7 @@ export async function analyzeOpportunity(opportunityId: string) {
     notes,
     principles,
     relatedProjects,
-    relatedBusinesses: [],
+    relatedBusinesses,
     relevantDecisions,
   });
 

@@ -1,5 +1,5 @@
-import { notFound, redirect } from "next/navigation";
-import { getFeatureFlag } from "@/lib/featureFlags";
+import { notFound } from "next/navigation";
+import { requireInvestorProtocolEnabled } from "@/lib/featureFlags";
 import {
   getApprovedStructures,
   getAssets,
@@ -16,8 +16,7 @@ import MandateForm from "@/components/MandateForm";
 import MandatesList from "@/components/MandatesList";
 
 export default async function InvestorProfileDetailPage({ params }: { params: { id: string } }) {
-  const flag = await getFeatureFlag("investor_protocol_enabled");
-  if (!flag?.enabled) redirect("/investors");
+  await requireInvestorProtocolEnabled();
 
   const investor = await getInvestorProfile(params.id);
   if (!investor) notFound();

@@ -1,6 +1,9 @@
 import { createInvestorProfile } from "@/lib/actions/investors";
+import { requireInvestorProtocolEnabled } from "@/lib/featureFlags";
 
-export default function NewInvestorProfilePage() {
+export default async function NewInvestorProfilePage() {
+  await requireInvestorProtocolEnabled();
+
   return (
     <div className="max-w-xl space-y-6">
       <div>

@@ -1,7 +1,10 @@
 -- Atlas OS V0.1 — core schema
--- Single-user (founder) system. RLS is enabled and scoped to authenticated
--- users so the architecture can grow into multi-user later without a
--- rewrite, but V0.1 does not implement per-user permissions.
+-- Single-user (founder) system. RLS is scoped to a single bootstrapped
+-- founder account (see is_founder()/founder_exists() below), not to
+-- every authenticated user — being logged in is not, by itself, enough
+-- to read or write Atlas data. The architecture can still grow into
+-- multi-user later (created_by is recorded on every row), but V0.1
+-- deliberately does not implement general RBAC.
 
 create extension if not exists "pgcrypto";
 
@@ -33,6 +36,55 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+-- ---------------------------------------------------------------------
+-- Founder identity — V0.1 is single-user by design. Rather than hard-coding
+-- an email or UUID into source, the founder is defined as whoever's
+-- profile was created first. This is set once, at bootstrap, by whoever
+-- signs up before anyone else does; every RLS policy in this schema
+-- checks is_founder() instead of merely "is authenticated", so a second
+-- account (however it gets created) has no access to Atlas data even if
+-- application-level signup restrictions are somehow bypassed.
+--
+-- Both functions are SECURITY DEFINER because they read public.profiles,
+-- which itself has row-level security (self-row-only) — without
+-- SECURITY DEFINER, is_founder() would only ever be able to see the
+-- calling user's own row and could never correctly identify the actual
+-- first-created profile for anyone but the founder themselves.
+-- ---------------------------------------------------------------------
+create or replace function public.founder_exists()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (select 1 from public.profiles);
+$$;
+
+create or replace function public.is_founder()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select auth.uid() is not null
+     and auth.uid() = (select id from public.profiles order by created_at asc, id asc limit 1);
+$$;
+
+revoke all on function public.founder_exists() from public;
+grant execute on function public.founder_exists() to anon, authenticated;
+
+revoke all on function public.is_founder() from public;
+grant execute on function public.is_founder() to anon, authenticated;
+-- Granted to anon too, not just authenticated: every founder-scoped RLS
+-- policy calls is_founder() in its USING clause, and an anonymous request
+-- still needs to *evaluate* that policy (as `auth.uid() is not null` =
+-- false, short-circuiting to a clean "no rows") rather than fail with a
+-- Postgres permission-denied error because it couldn't call the function
+-- at all. Confirmed by testing: without this grant, anonymous requests to
+-- any founder-scoped table throw instead of returning zero rows.
 
 -- ---------------------------------------------------------------------
 -- enums (kept as text + check constraints rather than pg enums so new
@@ -252,9 +304,10 @@ create trigger principles_set_updated_at before update on public.principles
   for each row execute procedure public.set_updated_at();
 
 -- ---------------------------------------------------------------------
--- Row Level Security — V0.1 is single-user: any authenticated user
--- (the founder) has full access. Architecture leaves room to scope by
--- created_by / org later without a schema rewrite.
+-- Row Level Security — V0.1 is single-user: only the bootstrapped founder
+-- (see is_founder() above) has access, not merely anyone authenticated.
+-- Architecture leaves room to scope by created_by / org later without a
+-- schema rewrite.
 -- ---------------------------------------------------------------------
 alter table public.profiles enable row level security;
 alter table public.opportunities enable row level security;
@@ -270,29 +323,29 @@ alter table public.ai_analyses enable row level security;
 create policy "profiles_self" on public.profiles
   for select using (auth.uid() = id);
 
-create policy "opportunities_authenticated_all" on public.opportunities
-  for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+create policy "opportunities_founder_all" on public.opportunities
+  for all using (public.is_founder()) with check (public.is_founder());
 
-create policy "projects_authenticated_all" on public.projects
-  for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+create policy "projects_founder_all" on public.projects
+  for all using (public.is_founder()) with check (public.is_founder());
 
-create policy "businesses_authenticated_all" on public.businesses
-  for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+create policy "businesses_founder_all" on public.businesses
+  for all using (public.is_founder()) with check (public.is_founder());
 
-create policy "decisions_authenticated_all" on public.decisions
-  for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+create policy "decisions_founder_all" on public.decisions
+  for all using (public.is_founder()) with check (public.is_founder());
 
-create policy "principles_authenticated_all" on public.principles
-  for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+create policy "principles_founder_all" on public.principles
+  for all using (public.is_founder()) with check (public.is_founder());
 
-create policy "notes_authenticated_all" on public.notes
-  for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+create policy "notes_founder_all" on public.notes
+  for all using (public.is_founder()) with check (public.is_founder());
 
-create policy "experiments_authenticated_all" on public.experiments
-  for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+create policy "experiments_founder_all" on public.experiments
+  for all using (public.is_founder()) with check (public.is_founder());
 
-create policy "relationships_authenticated_all" on public.relationships
-  for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+create policy "relationships_founder_all" on public.relationships
+  for all using (public.is_founder()) with check (public.is_founder());
 
-create policy "ai_analyses_authenticated_all" on public.ai_analyses
-  for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+create policy "ai_analyses_founder_all" on public.ai_analyses
+  for all using (public.is_founder()) with check (public.is_founder());

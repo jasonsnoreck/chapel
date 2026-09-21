@@ -21,6 +21,22 @@ import type {
   Relationship,
 } from "@/lib/types";
 
+// PostgREST's .or()/.and() combinators join their sub-filters on literal
+// commas in one query-string value, so a raw user search term containing
+// `,` `.` `(` `)` could otherwise inject extra column.operator.value
+// clauses into the expression, not just widen what substring it matches.
+// Wrapping the value in double quotes makes PostgREST treat the whole
+// thing as one literal string; `\` and `"` inside it must themselves be
+// escaped so they can't end the quoted value early. This only changes
+// how the term is delimited — the existing `%term%` substring-match
+// behavior is unchanged. Only needed for .or() calls — see the plain
+// .ilike() call in searchAll() below, which has no comma-joined clause
+// list to break out of in the first place.
+function toIlikePattern(term: string): string {
+  const escaped = term.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  return `"%${escaped}%"`;
+}
+
 export async function getDashboardData() {
   const supabase = createClient();
   const today = new Date().toISOString().slice(0, 10);
@@ -61,9 +77,8 @@ export async function getOpportunities(filters: OpportunityFilters = {}) {
   if (filters.attention) query = query.eq("attention", filters.attention);
   if (filters.category) query = query.eq("category", filters.category);
   if (filters.q) {
-    query = query.or(
-      `title.ilike.%${filters.q}%,short_description.ilike.%${filters.q}%,full_description.ilike.%${filters.q}%`
-    );
+    const pattern = toIlikePattern(filters.q);
+    query = query.or(`title.ilike.${pattern},short_description.ilike.${pattern},full_description.ilike.${pattern}`);
   }
 
   const { data, error } = await query;
@@ -215,18 +230,25 @@ export interface SearchResult {
 export async function searchAll(q: string): Promise<SearchResult[]> {
   if (!q.trim()) return [];
   const supabase = createClient();
-  const like = `%${q}%`;
+  // Only the .or() calls below need escaping: PostgREST joins their
+  // sub-filters on literal commas, which is exactly what let a search
+  // term restructure the filter. The standalone .ilike() call on notes
+  // is a single scalar parameter with no comma-joined clause list to
+  // break out of, so it's left as a plain substring pattern rather than
+  // risk changing its (already safe) behavior for no reason.
+  const pattern = toIlikePattern(q);
+  const plainPattern = `%${q}%`;
 
   const [opps, projects, businesses, decisions, principles, notes] = await Promise.all([
-    supabase.from("opportunities").select("id,title,short_description").or(`title.ilike.${like},short_description.ilike.${like},full_description.ilike.${like}`).limit(10),
-    supabase.from("projects").select("id,name,objective").or(`name.ilike.${like},objective.ilike.${like}`).limit(10),
-    supabase.from("businesses").select("id,name,description").or(`name.ilike.${like},description.ilike.${like}`).limit(10),
-    supabase.from("decisions").select("id,subject,decision").or(`subject.ilike.${like},decision.ilike.${like},reasoning.ilike.${like}`).limit(10),
-    supabase.from("principles").select("id,title,description").or(`title.ilike.${like},description.ilike.${like}`).limit(10),
+    supabase.from("opportunities").select("id,title,short_description").or(`title.ilike.${pattern},short_description.ilike.${pattern},full_description.ilike.${pattern}`).limit(10),
+    supabase.from("projects").select("id,name,objective").or(`name.ilike.${pattern},objective.ilike.${pattern}`).limit(10),
+    supabase.from("businesses").select("id,name,description").or(`name.ilike.${pattern},description.ilike.${pattern}`).limit(10),
+    supabase.from("decisions").select("id,subject,decision").or(`subject.ilike.${pattern},decision.ilike.${pattern},reasoning.ilike.${pattern}`).limit(10),
+    supabase.from("principles").select("id,title,description").or(`title.ilike.${pattern},description.ilike.${pattern}`).limit(10),
     supabase
       .from("notes")
       .select("id,body,opportunity_id,project_id,business_id,investor_profile_id")
-      .ilike("body", like)
+      .ilike("body", plainPattern)
       .limit(10),
   ]);
 
