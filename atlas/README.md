@@ -150,6 +150,101 @@ real investor relationships without a later rewrite.
   actual investment acceptance, payment processing, KYC/AML, investor
   qualification determinations, automated legal/tax decisions.
 
+## Future capability: Atlas Capital & Opportunity Matching (not built)
+
+This section documents a **future architectural direction only**. Nothing
+in this section is implemented, scheduled, or scaffolded — there is no
+`capital_needs` table, no matching engine, no new UI, and nothing here
+changes any behavior described elsewhere in this README. It exists so the
+Investor Protocol's data model isn't accidentally designed into a corner
+that would need a rewrite to support this later.
+
+**The concept.** Atlas eventually has two pipelines that today are
+tracked separately and never compared:
+
+- **Opportunity Pipeline** — "What should Atlas build, acquire, or own?"
+  (opportunities, projects, businesses, and assets already in this
+  schema, plus future opportunity types: acquisitions, real estate,
+  equipment, IP, strategic partnerships, other durable assets.)
+- **Capital Pipeline** — "Who or what can provide the resources required
+  to make it happen?" (the existing `investor_profiles` +
+  `investment_mandates` from the Investor Protocol.)
+
+Eventually, Atlas should be able to identify potential matches between
+the two — not execute them.
+
+**Capital Need (future concept, no table exists yet).** An opportunity
+may eventually produce one or more Capital Needs describing what it
+requires to proceed: the related opportunity/project/business/asset, an
+amount, capital type, timing, purpose, required contribution type,
+desired investor/involvement characteristics, preferred or permitted
+structures, existing committed capital, remaining requirement,
+risk/constraint information, status, notes, and related decisions. A
+Capital Need must **not** automatically imply outside investment is
+needed — it may just as well be satisfied by Atlas's own capital, debt,
+seller financing, internal cash flow, equipment, labor, customers/
+distribution, a strategic partnership, or some other resource.
+
+**Investor Profile + Investment Mandate remain the foundation, unchanged
+and uncollapsed.** The matching system, when it exists, would read from
+the same separation already built: Investor Profile describes the
+participant; Investment Mandate describes what they're willing to do in
+a specific context, and one investor can have many mandates. This
+addendum does not merge them into one object, and nothing here proposes
+to.
+
+**Matching Engine (future, not built).** Eventually Atlas should be able
+to compare a Capital Need against an Investment Mandate across dimensions
+like capital amount, capital type, timing, industry, geography, target
+type, involvement, economic configuration, control configuration,
+information requirements, liquidity preferences, Atlas/network
+relationship, and risk/constraint compatibility — and produce a **Match
+Candidate**: which dimensions look compatible, which conflict, what's
+unknown, and what questions need a human to confirm. Not an automatic
+investment decision.
+
+**Governance rule that any future matching engine must preserve.** A
+match is not an approval. The pipeline stays: Discovery → Analysis →
+Potential Match → Founder Review → Approved Structure → Professional
+Review (where required) → Documentation → Execution. AI agents may
+identify and analyze potential matches. They must never: approve
+investments, promise returns, negotiate legal investment terms
+autonomously, determine securities-law status, determine investor
+qualification, execute investments, move money, or create legal
+documents outside an approved human/professional workflow. This is the
+same founder-control boundary the rest of Atlas already enforces (see
+**Founder control** above and the Investor Protocol's guardrails) —
+matching does not get an exception to it.
+
+**Ecosystem matching (future).** The same system should eventually be
+able to notice relationships *between* Atlas's own holdings — e.g. an
+Atlas-owned business, an acquisition candidate, an existing customer
+base, available capital, and a prospective operator might collectively
+represent an opportunity that isn't visible evaluating any one of them
+alone. Atlas should eventually evaluate opportunities in the context of
+the whole ecosystem it already holds, not only individually.
+
+**Private network, not a public marketplace.** This is not, now or as
+envisioned, a public investment marketplace or a solicitation surface.
+It's a private system that knows what Atlas owns, what it's building,
+what it wants to acquire, what opportunities require, what capital and
+resources are available, what participants have expressed interest in,
+what structures are permitted, and what's happened historically — and
+uses that to find intelligent matches within the Atlas ecosystem itself,
+for the founder to review. The more businesses, assets, investors,
+operators, transactions, opportunities, and historical decisions Atlas
+accumulates, the more useful this eventually becomes — which is the
+actual argument for capturing all of it carefully now, per the rest of
+this README, even though none of the matching itself exists yet.
+
+**Explicitly not part of this or any current phase:** the matching
+engine itself, investor solicitation, a public investor marketplace,
+any investor-facing functionality, any change to the current Investor
+Protocol guardrails (see above — they stand as written), and any
+autonomous investment authority for the AI. This section is a note for
+future architecture, not a roadmap commitment or a scope expansion of
+V0.1.
+
 ## Architecture notes
 
 - `src/lib/types.ts` — hand-written types mirroring the schema, plus the
