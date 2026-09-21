@@ -10,6 +10,7 @@ const LINKS = [
   { href: "/decisions", label: "Decisions" },
   { href: "/principles", label: "Principles" },
   { href: "/investors", label: "Investors" },
+  { href: "/capital-ecosystem", label: "Capital & Ecosystem" },
 ];
 
 export default function Nav() {

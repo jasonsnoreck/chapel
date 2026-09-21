@@ -6,6 +6,8 @@ import StatusControl from "@/components/StatusControl";
 import NotesSection from "@/components/NotesSection";
 import DecisionsList from "@/components/DecisionsList";
 import AnalysisPanel from "@/components/AnalysisPanel";
+import BusinessPlanAnalysisPanel from "@/components/BusinessPlanAnalysisPanel";
+import OpportunityProvenancePanel from "@/components/OpportunityProvenancePanel";
 import RelatedItemsPanel from "@/components/RelatedItemsPanel";
 import {
   getAnalysesFor,
@@ -17,6 +19,7 @@ import {
   getProjects,
   getRelatedItems,
 } from "@/lib/queries";
+import { getBusinessPlanAnalysesFor, getDiligenceItemsFor, getProvenanceFor } from "@/lib/queries-capital";
 import { promoteToProject, setOpportunityAttention, setOpportunityStatus, updateOpportunity } from "@/lib/actions/opportunities";
 import type { AttentionState, OpportunityStatus } from "@/lib/types";
 
@@ -46,7 +49,18 @@ export default async function OpportunityDetailPage({ params }: { params: { id: 
   const opportunity = await getOpportunity(params.id);
   if (!opportunity) notFound();
 
-  const [notes, decisions, analyses, related, project, allOpportunities, allProjects] = await Promise.all([
+  const [
+    notes,
+    decisions,
+    analyses,
+    related,
+    project,
+    allOpportunities,
+    allProjects,
+    businessPlanAnalyses,
+    provenance,
+    diligenceItems,
+  ] = await Promise.all([
     getNotesFor("opportunity", opportunity.id),
     getDecisionsFor("opportunity", opportunity.id),
     getAnalysesFor(opportunity.id),
@@ -54,7 +68,12 @@ export default async function OpportunityDetailPage({ params }: { params: { id: 
     getProjectByOpportunity(opportunity.id),
     getOpportunities(),
     getProjects(),
+    getBusinessPlanAnalysesFor(opportunity.id),
+    getProvenanceFor(opportunity.id),
+    getDiligenceItemsFor(opportunity.id),
   ]);
+
+  const hasPlanText = Boolean((opportunity.full_description || opportunity.short_description || "").trim());
 
   const linkedIds = new Set(related.map((r) => `${r.type}:${r.id}`));
   const candidates = [
@@ -152,6 +171,12 @@ export default async function OpportunityDetailPage({ params }: { params: { id: 
 
         <AnalysisPanel opportunityId={opportunity.id} analyses={analyses} />
 
+        <BusinessPlanAnalysisPanel
+          opportunityId={opportunity.id}
+          hasPlanText={hasPlanText}
+          analyses={businessPlanAnalyses}
+        />
+
         <NotesSection notes={notes} parentType="opportunity" parentId={opportunity.id} />
       </div>
 
@@ -219,6 +244,12 @@ export default async function OpportunityDetailPage({ params }: { params: { id: 
           related={related}
           candidates={candidates}
           revalidate={`/opportunities/${opportunity.id}`}
+        />
+
+        <OpportunityProvenancePanel
+          opportunityId={opportunity.id}
+          provenance={provenance}
+          diligenceItems={diligenceItems}
         />
       </div>
     </div>

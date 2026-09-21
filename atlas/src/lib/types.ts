@@ -46,6 +46,12 @@ export type NotableParentType = RelatableType | "investor_profile" | "investment
 
 export type AssetStatus = "active" | "dormant" | "sold" | "retired";
 
+// A business can use an asset (lease it, operate out of it) without
+// being it and without Atlas owning it — ownership_type makes that
+// explicit rather than letting "business or asset" blur together.
+export type AssetType = "real_estate" | "equipment" | "intellectual_property" | "other";
+export type OwnershipType = "owned" | "leased" | "licensed" | "other";
+
 // --- Investor Protocol (architectural foundation, not an active
 // onboarding/solicitation system — see supabase/migrations/0003_investor_protocol.sql) ---
 
@@ -202,6 +208,9 @@ export type Decision = {
   business_id: string | null;
   investor_profile_id: string | null;
   investment_mandate_id: string | null;
+  financing_event_id: string | null;
+  capital_need_id: string | null;
+  ecosystem_relationship_id: string | null;
   created_at: string;
   created_by: string | null;
 };
@@ -292,6 +301,8 @@ export type Asset = {
   name: string;
   description: string | null;
   status: AssetStatus;
+  asset_type: AssetType;
+  ownership_type: OwnershipType;
   business_id: string | null;
   project_id: string | null;
   created_at: string;
@@ -368,6 +379,388 @@ export type InvestmentMandate = {
   documents_note: string | null;
   created_at: string;
   updated_at: string;
+  created_by: string | null;
+};
+
+// --- Capital & Ecosystem architecture (see supabase/migrations/0004_capital_ecosystem_architecture.sql
+// and README "Capital & Ecosystem architecture" for the design rationale) ---
+
+export type FinancingPositionType = "mortgage" | "loan" | "line_of_credit" | "seller_note" | "other";
+export type FinancingPositionStatus = "active" | "paid_off" | "refinanced_out";
+export type FinancingEventType = "draw" | "principal_payment" | "refinance" | "payoff" | "modification" | "other";
+export type FinancingEventDirection = "increase" | "decrease" | "neutral";
+export type FinancingDestinationType = "opportunity" | "project" | "business" | "asset" | "capital_need" | "general" | "other";
+
+export type CapitalNeedTargetType = "opportunity" | "project" | "business" | "asset";
+export type CapitalNeedStatus = "draft" | "open" | "partially_met" | "met" | "withdrawn";
+
+export type CapitalSourceType =
+  | "atlas_equity"
+  | "investor_mandate"
+  | "seller_financing"
+  | "bank_debt"
+  | "sba_debt"
+  | "equipment_financing"
+  | "internal_cashflow"
+  | "atlas_business"
+  | "atlas_asset"
+  | "strategic_partner"
+  | "customer_prepayment"
+  | "contributed_resources"
+  | "other";
+export type CapitalSourceStatus = "active" | "inactive" | "exhausted";
+export type AssessedBy = "founder" | "ai";
+
+export type ExternalEntityType = "company" | "individual" | "marketplace" | "broker" | "other";
+
+// Deliberately separate from RelatableType/Relationship — that table
+// keeps doing its existing job (simple symmetric "related items" links
+// in the UI); this is a typed, directed, evidence-bearing edge for the
+// Ecosystem Layer, including AI-discovery/validation.
+export type EcosystemNodeType = "opportunity" | "project" | "business" | "asset" | "capital_need";
+export type EcosystemToType = EcosystemNodeType | "external_entity";
+export type EcosystemRelationshipType =
+  | "supplier"
+  | "customer"
+  | "distributor"
+  | "shared_equipment"
+  | "shared_facility"
+  | "shared_labor"
+  | "lead_generation"
+  | "cross_sell"
+  | "capacity_utilization"
+  | "byproduct_utilization"
+  | "procurement_aggregation"
+  | "geographic_cluster"
+  | "complementary_service"
+  | "financing"
+  | "collateral"
+  | "strategic_dependency"
+  | "potential_conflict"
+  | "competitive"
+  | "replacement_opportunity"
+  | "external_dependency"
+  | "other";
+export type EcosystemRelationshipDirection = "directed" | "mutual";
+export type EcosystemRelationshipSource = "founder" | "ai_discovered";
+export type Confidence = "low" | "medium" | "high";
+export type ValidationStatus = "proposed" | "confirmed" | "rejected" | "ignored";
+
+export type CapitalUtilityTargetType = "business" | "asset";
+
+export type MatchCandidateProvenance = "founder" | "ai";
+export type MatchCandidateStatus = "proposed" | "founder_reviewed" | "dismissed";
+
+export type PredictionSubjectType =
+  | "ecosystem_relationship"
+  | "match_candidate"
+  | "capital_utility_assessment"
+  | "ai_analysis"
+  | "business_plan_analysis"
+  | "opportunity"
+  | "other";
+export type PredictionCategory =
+  | "relationship_discovery"
+  | "financial_estimation"
+  | "acquisition_screening"
+  | "benchmarking"
+  | "operational_prediction"
+  | "capital_analysis"
+  | "ecosystem_opportunity_discovery"
+  | "other";
+export type PredictionStatus =
+  | "proposed"
+  | "under_evaluation"
+  | "developing"
+  | "validated"
+  | "contradicted"
+  | "expired"
+  | "unable_to_evaluate";
+export type VarianceReason = "execution" | "market" | "data_quality" | "reasoning_error" | "other";
+
+export type DiscoveryChannel =
+  | "marketplace"
+  | "broker"
+  | "public_web"
+  | "direct_submission"
+  | "referral"
+  | "public_records"
+  | "founder"
+  | "ai_ecosystem_discovery"
+  | "other";
+export type InformationTier = "discovery" | "screening" | "diligence";
+
+export type DiligenceItemType =
+  | "pnl"
+  | "balance_sheet"
+  | "tax_return"
+  | "lease"
+  | "customer_concentration"
+  | "equipment_list"
+  | "payroll"
+  | "debt_schedule"
+  | "contracts"
+  | "inventory"
+  | "seller_disclosure"
+  | "other";
+export type DiligenceItemStatus = "requested" | "received" | "reviewed" | "not_applicable";
+
+export type AssetValuation = {
+  id: string;
+  asset_id: string | null;
+  business_id: string | null;
+  value: number;
+  as_of_date: string;
+  basis: string | null;
+  notes: string | null;
+  created_at: string;
+  created_by: string | null;
+};
+
+export type FinancingPosition = {
+  id: string;
+  asset_id: string | null;
+  business_id: string | null;
+  position_type: FinancingPositionType;
+  status: FinancingPositionStatus;
+  lender: string | null;
+  opened_at: string | null;
+  closed_at: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+};
+
+export type FinancingEvent = {
+  id: string;
+  financing_position_id: string;
+  event_type: FinancingEventType;
+  direction: FinancingEventDirection;
+  amount: number;
+  event_date: string;
+  destination_type: FinancingDestinationType | null;
+  destination_id: string | null;
+  terms: Record<string, unknown>;
+  decision_id: string | null;
+  notes: string | null;
+  created_at: string;
+  created_by: string | null;
+};
+
+export type CapitalNeedRequirements = {
+  preferred_capital_types?: CapitalSourceType[];
+  acceptable_capital_types?: CapitalSourceType[];
+  collateral_requirements?: string;
+  ownership_implications?: string;
+  control_implications?: string;
+  repayment_characteristics?: string;
+  geography?: string;
+  other_constraints?: string;
+};
+
+export type CapitalNeed = {
+  id: string;
+  target_type: CapitalNeedTargetType;
+  target_id: string;
+  amount: number | null;
+  purpose: string | null;
+  timing: string | null;
+  status: CapitalNeedStatus;
+  requirements: CapitalNeedRequirements;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+};
+
+export type CapitalSource = {
+  id: string;
+  capital_source_type: CapitalSourceType;
+  investment_mandate_id: string | null;
+  source_business_id: string | null;
+  source_asset_id: string | null;
+  name: string | null;
+  terms: Record<string, unknown>;
+  status: CapitalSourceStatus;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+};
+
+export type CapitalAvailability = {
+  id: string;
+  capital_source_id: string;
+  amount_available: number | null;
+  as_of_date: string;
+  conditions: Record<string, unknown>;
+  assessed_by: AssessedBy;
+  notes: string | null;
+  created_at: string;
+  created_by: string | null;
+};
+
+export type ExternalEntity = {
+  id: string;
+  name: string;
+  entity_type: ExternalEntityType;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+};
+
+export type EcosystemRelationship = {
+  id: string;
+  from_type: EcosystemNodeType;
+  from_id: string;
+  to_type: EcosystemToType;
+  to_id: string;
+  relationship_type: EcosystemRelationshipType;
+  direction: EcosystemRelationshipDirection;
+  source: EcosystemRelationshipSource;
+  confidence: Confidence | null;
+  potential_effect: string | null;
+  evidence: string | null;
+  assumptions: string | null;
+  unknowns: string | null;
+  validation_status: ValidationStatus;
+  validated_by: string | null;
+  validated_at: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+};
+
+// Structured, but every field is a label/estimate, never a financing
+// guarantee — see README.
+export type CapitalUtilityAssessmentDetail = {
+  borrowing_capacity?: Confidence;
+  collateral_quality?: Confidence;
+  lending_accessibility?: Confidence;
+  liquidity?: Confidence;
+  cash_flow_capacity?: Confidence;
+  equity_generation_potential?: Confidence;
+  ability_to_support_other_atlas_business?: Confidence;
+  encumbrance_tolerance?: Confidence;
+  strategic_importance?: Confidence;
+  saleability?: Confidence;
+};
+
+export type CapitalUtilityAssessment = {
+  id: string;
+  target_type: CapitalUtilityTargetType;
+  target_id: string;
+  assessed_by: AssessedBy;
+  assessment: CapitalUtilityAssessmentDetail;
+  notes: string | null;
+  created_at: string;
+  created_by: string | null;
+};
+
+export type MatchCandidate = {
+  id: string;
+  capital_need_id: string;
+  capital_source_id: string;
+  compatible_dimensions: string[];
+  conflicting_dimensions: string[];
+  unknown_dimensions: string[];
+  questions_for_founder: string | null;
+  potential_structure_id: string | null;
+  provenance: MatchCandidateProvenance;
+  status: MatchCandidateStatus;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+};
+
+export type Prediction = {
+  id: string;
+  subject_type: PredictionSubjectType;
+  subject_id: string | null;
+  category: PredictionCategory;
+  prediction_summary: string;
+  expected_outcome: string | null;
+  predicted_at: string;
+  economic_clock_at: string | null;
+  evaluation_clock_at: string | null;
+  status: PredictionStatus;
+  observed_outcome: string | null;
+  variance: string | null;
+  variance_reason: VarianceReason | null;
+  evaluated_at: string | null;
+  evaluated_by: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+};
+
+export type OpportunityProvenance = {
+  id: string;
+  opportunity_id: string;
+  external_entity_id: string | null;
+  discovery_channel: DiscoveryChannel;
+  information_tier: InformationTier;
+  first_discovered_at: string;
+  last_observed_at: string;
+  still_available: boolean | null;
+  source_url: string | null;
+  source_reference: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+};
+
+export type DiligenceItem = {
+  id: string;
+  opportunity_id: string;
+  item_type: DiligenceItemType;
+  status: DiligenceItemStatus;
+  received_at: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+};
+
+// Deliberately separate from AnalysisResult/ai_analyses — the generic
+// "Analyze with Atlas" action is unchanged; this is a distinct, richer
+// analysis specific to business-plan-shaped input. Same
+// facts/assumptions/unknowns discipline as AnalysisResult.
+export type BusinessPlanAnalysisResult = {
+  facts: string[];
+  assumptions: string[];
+  unknowns: string[];
+  business_model: string;
+  revenue_model: string;
+  cost_structure: string;
+  startup_capital_estimate: string;
+  working_capital_estimate: string;
+  break_even_assumptions: string;
+  operational_requirements: string;
+  risks: string[];
+  missing_information: string[];
+  diligence_questions: string[];
+  capital_requirements: string;
+  atlas_relationships: string;
+  ecosystem_opportunities: string;
+  ecosystem_conflicts: string;
+  benchmark_comparisons: string;
+  disclaimer: string;
+};
+
+export type BusinessPlanAnalysis = {
+  id: string;
+  opportunity_id: string;
+  provider: string;
+  model: string | null;
+  input_context: Record<string, unknown>;
+  result: BusinessPlanAnalysisResult;
+  created_at: string;
   created_by: string | null;
 };
 
@@ -478,6 +871,96 @@ export type Database = {
         Row: InvestmentMandate;
         Insert: Partial<InvestmentMandate> & { investor_profile_id: string };
         Update: Partial<InvestmentMandate>;
+        Relationships: [];
+      };
+      asset_valuations: {
+        Row: AssetValuation;
+        Insert: Partial<AssetValuation> & { value: number };
+        Update: Partial<AssetValuation>;
+        Relationships: [];
+      };
+      financing_positions: {
+        Row: FinancingPosition;
+        Insert: Partial<FinancingPosition>;
+        Update: Partial<FinancingPosition>;
+        Relationships: [];
+      };
+      financing_events: {
+        Row: FinancingEvent;
+        Insert: Partial<FinancingEvent> & { financing_position_id: string; direction: FinancingEventDirection };
+        Update: Partial<FinancingEvent>;
+        Relationships: [];
+      };
+      capital_needs: {
+        Row: CapitalNeed;
+        Insert: Partial<CapitalNeed> & { target_type: CapitalNeedTargetType; target_id: string };
+        Update: Partial<CapitalNeed>;
+        Relationships: [];
+      };
+      capital_sources: {
+        Row: CapitalSource;
+        Insert: Partial<CapitalSource> & { capital_source_type: CapitalSourceType };
+        Update: Partial<CapitalSource>;
+        Relationships: [];
+      };
+      capital_availability: {
+        Row: CapitalAvailability;
+        Insert: Partial<CapitalAvailability> & { capital_source_id: string };
+        Update: Partial<CapitalAvailability>;
+        Relationships: [];
+      };
+      external_entities: {
+        Row: ExternalEntity;
+        Insert: Partial<ExternalEntity> & { name: string };
+        Update: Partial<ExternalEntity>;
+        Relationships: [];
+      };
+      ecosystem_relationships: {
+        Row: EcosystemRelationship;
+        Insert: Partial<EcosystemRelationship> & {
+          from_type: EcosystemNodeType;
+          from_id: string;
+          to_type: EcosystemToType;
+          to_id: string;
+          relationship_type: EcosystemRelationshipType;
+        };
+        Update: Partial<EcosystemRelationship>;
+        Relationships: [];
+      };
+      capital_utility_assessments: {
+        Row: CapitalUtilityAssessment;
+        Insert: Partial<CapitalUtilityAssessment> & { target_type: CapitalUtilityTargetType; target_id: string };
+        Update: Partial<CapitalUtilityAssessment>;
+        Relationships: [];
+      };
+      match_candidates: {
+        Row: MatchCandidate;
+        Insert: Partial<MatchCandidate> & { capital_need_id: string; capital_source_id: string };
+        Update: Partial<MatchCandidate>;
+        Relationships: [];
+      };
+      predictions: {
+        Row: Prediction;
+        Insert: Partial<Prediction> & { subject_type: PredictionSubjectType; prediction_summary: string };
+        Update: Partial<Prediction>;
+        Relationships: [];
+      };
+      opportunity_provenance: {
+        Row: OpportunityProvenance;
+        Insert: Partial<OpportunityProvenance> & { opportunity_id: string };
+        Update: Partial<OpportunityProvenance>;
+        Relationships: [];
+      };
+      diligence_items: {
+        Row: DiligenceItem;
+        Insert: Partial<DiligenceItem> & { opportunity_id: string; item_type: DiligenceItemType };
+        Update: Partial<DiligenceItem>;
+        Relationships: [];
+      };
+      business_plan_analyses: {
+        Row: BusinessPlanAnalysis;
+        Insert: Partial<BusinessPlanAnalysis> & { opportunity_id: string; provider: string; result: BusinessPlanAnalysisResult };
+        Update: Partial<BusinessPlanAnalysis>;
         Relationships: [];
       };
     };

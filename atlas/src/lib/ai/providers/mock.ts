@@ -1,5 +1,11 @@
-import type { AnalysisResult } from "@/lib/types";
-import type { AIProvider, AnalysisContext } from "../types";
+import type { BusinessPlanAnalysisResult, AnalysisResult } from "@/lib/types";
+import type {
+  AIProvider,
+  AnalysisContext,
+  BusinessPlanAnalysisContext,
+  EcosystemDiscoveryContext,
+  EcosystemDiscoveryResult,
+} from "../types";
 
 // Deterministic, no-network provider. Used when AI_PROVIDER=mock or no
 // provider is configured, so the app is fully usable without an API key.
@@ -42,5 +48,68 @@ export class MockAIProvider implements AIProvider {
     };
 
     return result;
+  }
+
+  async analyzeBusinessPlan(ctx: BusinessPlanAnalysisContext): Promise<BusinessPlanAnalysisResult> {
+    const { opportunity, planText } = ctx;
+
+    return {
+      facts: [`[Placeholder] The supplied text is ${planText.length} characters long.`],
+      assumptions: ["[Placeholder, unverified] Configure AI_PROVIDER=anthropic for a real plan analysis."],
+      unknowns: ["[Unknown] Everything about this plan's economics — the mock provider does not read the text."],
+      business_model: `[Placeholder] Business model for "${opportunity.title}" not analyzed by the mock provider.`,
+      revenue_model: "[Placeholder] Not analyzed.",
+      cost_structure: "[Placeholder] Not analyzed.",
+      startup_capital_estimate: "[Placeholder estimate] Unknown — enable a real AI provider.",
+      working_capital_estimate: "[Placeholder estimate] Unknown.",
+      break_even_assumptions: "[Placeholder] Not analyzed.",
+      operational_requirements: "[Placeholder] Not analyzed.",
+      risks: ["[Placeholder] Real risks are not assessed by the mock provider."],
+      missing_information: ["[Placeholder] Everything — this is a placeholder response."],
+      diligence_questions: ["[Placeholder] What would you ask the founder if this were real diligence?"],
+      capital_requirements: "[Placeholder] Not analyzed.",
+      atlas_relationships: "[Placeholder] Not analyzed against Atlas's existing businesses/assets.",
+      ecosystem_opportunities: "[Placeholder] Not analyzed.",
+      ecosystem_conflicts: "[Placeholder] Not analyzed.",
+      benchmark_comparisons: "[Placeholder] No benchmark data available in the mock provider.",
+      disclaimer:
+        "This is a placeholder business plan analysis from the mock AI provider — no real model was called. It is a suggestion, never a decision or verified diligence.",
+    };
+  }
+
+  async discoverEcosystemRelationships(ctx: EcosystemDiscoveryContext): Promise<EcosystemDiscoveryResult> {
+    const { nodes } = ctx;
+
+    if (nodes.length < 2) {
+      return {
+        candidates: [],
+        disclaimer:
+          "Fewer than two Atlas nodes exist yet, so the mock provider has nothing to relate. This is a placeholder response — no real model was called.",
+      };
+    }
+
+    const [a, b] = nodes;
+    return {
+      candidates: [
+        {
+          from_type: a.type,
+          from_id: a.id,
+          to_type: b.type,
+          to_id: b.id,
+          to_external_name: null,
+          relationship_type: "other",
+          what_it_noticed: `[Placeholder] A possible relationship between "${a.name}" and "${b.name}".`,
+          why_atlas_noticed_it: "[Placeholder] The mock provider only demonstrates the response shape — it does not reason about real relationships.",
+          evidence: "[Placeholder] None — enable AI_PROVIDER=anthropic for real discovery.",
+          assumptions: "[Placeholder, unverified] This pairing is not a real hypothesis.",
+          unknowns: "[Unknown] Everything.",
+          potential_effect: "[Placeholder, hypothetical] Unknown.",
+          confidence: "low",
+          what_would_validate_it: "[Placeholder] Enable a real AI provider and review its actual output.",
+        },
+      ],
+      disclaimer:
+        "These are placeholder candidates from the mock AI provider — no real model was called, and none of this should be treated as a genuine discovery.",
+    };
   }
 }

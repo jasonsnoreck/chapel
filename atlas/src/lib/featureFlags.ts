@@ -24,3 +24,13 @@ export async function requireInvestorProtocolEnabled() {
   const enabled = await isFeatureEnabled("investor_protocol_enabled");
   if (!enabled) redirect("/investors");
 }
+
+// Same choke-point pattern for the Capital & Ecosystem module
+// (businesses/assets financial profile, capital needs/sources, ecosystem
+// relationships, match candidates, intelligence reports). Business plan
+// analysis and opportunity provenance/diligence are NOT behind this flag
+// — they live on the always-visible opportunity detail page.
+export async function requireCapitalEcosystemEnabled() {
+  const enabled = await isFeatureEnabled("capital_ecosystem_enabled");
+  if (!enabled) redirect("/capital-ecosystem");
+}

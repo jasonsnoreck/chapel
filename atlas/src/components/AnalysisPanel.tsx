@@ -18,7 +18,7 @@ export default function AnalysisPanel({ opportunityId, analyses }: { opportunity
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">AI analysis</h2>
         <form action={analyzeOpportunity.bind(null, opportunityId)}>
           <SubmitButton pendingLabel="Analyzing…">Analyze with Atlas</SubmitButton>

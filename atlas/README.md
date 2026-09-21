@@ -34,7 +34,13 @@ root — Chapel is itself one of Atlas's own seed projects.
    soy sauce, Blue Star, Chapel, and a business acquisition lead) — not
    dummy data. `0003_investor_protocol.sql` adds the Investor Protocol
    architectural foundation (see below) — data model only, disabled by
-   default.
+   default. `0004_capital_ecosystem_architecture.sql` adds the Capital &
+   Ecosystem architecture (see below) — new tables and RLS only, gated by
+   its own feature flag, disabled by default. This is a **new forward
+   migration**, not an edit to 0001–0003: this sandbox has no way to
+   confirm whether an earlier migration has already been applied to a
+   real Supabase project, so the safe assumption was made that it might
+   have been — see **Known limitations**.
 3. **Copy `.env.example` to `.env.local`** and fill in:
    - `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` — from
      Supabase project settings → API.
@@ -99,13 +105,14 @@ npm run dev
   project always creates a paired Decision record.
 
 Not built, per spec: investor portal, multi-user permissions, public
-website, property analysis, full accounting, banking/payroll
-integrations, CRM, complex portfolio management, automated investment
-decisions, acquisition transaction management, mobile app. The schema
-(`businesses` table, `created_by` on every row) leaves room for these
-without a rewrite, but none of it is implemented now — including
-multi-user: V0.1 is hard-scoped to exactly one founder account, see
-**Security model** below.
+website, full accounting, banking/payroll integrations, CRM, automated
+investment decisions, acquisition transaction management, mobile app.
+The schema (`businesses` table, `created_by` on every row) leaves room
+for these without a rewrite, but none of it is implemented now —
+including multi-user: V0.1 is hard-scoped to exactly one founder account,
+see **Security model** below. Asset/property tracking, capital-need
+modeling, and a matching foundation are now implemented — see
+**Capital & Ecosystem Architecture** below.
 
 ## Investor Protocol (architectural foundation only)
 
@@ -150,100 +157,188 @@ real investor relationships without a later rewrite.
   actual investment acceptance, payment processing, KYC/AML, investor
   qualification determinations, automated legal/tax decisions.
 
-## Future capability: Atlas Capital & Opportunity Matching (not built)
+## Capital & Ecosystem Architecture (implemented, internal-only)
 
-This section documents a **future architectural direction only**. Nothing
-in this section is implemented, scheduled, or scaffolded — there is no
-`capital_needs` table, no matching engine, no new UI, and nothing here
-changes any behavior described elsewhere in this README. It exists so the
-Investor Protocol's data model isn't accidentally designed into a corner
-that would need a rewrite to support this later.
+This module — previously documented only as a future direction — is now
+**implemented**: real tables, RLS, queries, server actions, and UI, gated
+end-to-end behind `feature_flags.capital_ecosystem_enabled` (default
+`false`, seeded in `0004_capital_ecosystem_architecture.sql`). Visiting
+`/capital-ecosystem` while disabled shows a one-paragraph explanation and
+a single founder toggle, same pattern as the Investor Protocol. Two
+pieces — Business Plan Analysis and Opportunity provenance/diligence —
+are deliberately **not** behind this flag; they live on the always-visible
+opportunity detail page (see **First usable milestone** below).
 
-**The concept.** Atlas eventually has two pipelines that today are
-tracked separately and never compared:
+The datasets here start empty on a fresh install. That's intentional, not
+a placeholder: the schema was built to be ready to accumulate real
+businesses, assets, capital needs, capital sources, and ecosystem
+relationships from day one, not sized to "what V0.1 already has."
 
-- **Opportunity Pipeline** — "What should Atlas build, acquire, or own?"
-  (opportunities, projects, businesses, and assets already in this
-  schema, plus future opportunity types: acquisitions, real estate,
-  equipment, IP, strategic partnerships, other durable assets.)
-- **Capital Pipeline** — "Who or what can provide the resources required
-  to make it happen?" (the existing `investor_profiles` +
-  `investment_mandates` from the Investor Protocol.)
+### Ontology (deliberately distinct concepts)
 
-Eventually, Atlas should be able to identify potential matches between
-the two — not execute them.
+- **Business** vs **Asset** vs **Project** vs **Opportunity**: a Business
+  is an operating entity; an Asset is a discrete piece of property
+  (`asset_type`: real estate / equipment / IP / other); a Project is
+  V0.1's existing execution unit; an Opportunity is anything not yet
+  committed to. None of these tables were merged.
+- **Ownership type matters.** `assets.ownership_type` (owned / leased /
+  licensed / other) exists specifically so a **leased property is never
+  represented as an owned asset** — the asset detail page shows an
+  explicit warning banner when `ownership_type !== "owned"`, since
+  valuation/financing recorded there describes Atlas's actual interest,
+  not the underlying property.
+- **Financing Position vs Financing Event.** `financing_positions` is the
+  actual tracked instrument (a loan, a line of credit, seller financing —
+  `position_type`); `financing_events` is its append-only ledger
+  (draw/paydown/refinance/etc., each with an explicit `direction`:
+  increase / decrease / neutral, not inferred from event type). **The
+  current balance is never stored** — `derivedBalance()` in
+  `src/lib/queries-capital.ts` reduces the event ledger at read time, so
+  the balance can't silently drift from its history. An asset's
+  unlevered valuation (`asset_valuations`) is recorded completely
+  separately from its financing — paying down or refinancing debt never
+  changes recorded valuation, and valuation and financing are shown in
+  separate sections on the Business/Asset detail pages.
+- **Capital Need vs Capital Source vs Capital Availability.** A Capital
+  Need (`capital_needs`) is a first-class, richly attributed record
+  (purpose, amount, target via `target_type`/`target_id`, status) — not
+  just a number. Capital Source (`capital_sources`) is the broad
+  abstraction; an Investment Mandate from the Investor Protocol is one
+  possible `linked_source` a Capital Source can point at, not the only
+  kind. Capital Availability (`capital_availability`) is separate from
+  Capital Source on purpose — a source's *capacity* is point-in-time and
+  changes, so it's modeled as its own append-only series rather than a
+  mutable field on the source.
+- **Investor Profile / Investment Mandate are untouched.** Nothing in
+  this migration modifies those tables; Capital Source references them
+  only through the polymorphic `linked_source` pattern already used
+  elsewhere in this schema.
 
-**Capital Need (future concept, no table exists yet).** An opportunity
-may eventually produce one or more Capital Needs describing what it
-requires to proceed: the related opportunity/project/business/asset, an
-amount, capital type, timing, purpose, required contribution type,
-desired investor/involvement characteristics, preferred or permitted
-structures, existing committed capital, remaining requirement,
-risk/constraint information, status, notes, and related decisions. A
-Capital Need must **not** automatically imply outside investment is
-needed — it may just as well be satisfied by Atlas's own capital, debt,
-seller financing, internal cash flow, equipment, labor, customers/
-distribution, a strategic partnership, or some other resource.
+### Matching foundation (Discovery only — never an approval)
 
-**Investor Profile + Investment Mandate remain the foundation, unchanged
-and uncollapsed.** The matching system, when it exists, would read from
-the same separation already built: Investor Profile describes the
-participant; Investment Mandate describes what they're willing to do in
-a specific context, and one investor can have many mandates. This
-addendum does not merge them into one object, and nothing here proposes
-to.
+`match_candidates` links a Capital Need to a Capital Source and records
+compatible dimensions, conflicting dimensions, open questions, and
+possible structures as text — **there is no numeric score anywhere in
+this schema**, on purpose. `match_candidates.status` only ever reaches
+`proposed` or `founder_reviewed` from app code; nothing in this codebase
+can move it further. The governance path this preserves, unchanged from
+the Investor Protocol: Discovery → Analysis → Potential Match → Founder
+Review → Approved Structure → Professional Review → Documentation →
+Execution. Atlas does not move money, autonomously execute or negotiate
+investments, or determine legal/securities status — those still require
+the human/professional workflow the Investor Protocol already gates.
 
-**Matching Engine (future, not built).** Eventually Atlas should be able
-to compare a Capital Need against an Investment Mandate across dimensions
-like capital amount, capital type, timing, industry, geography, target
-type, involvement, economic configuration, control configuration,
-information requirements, liquidity preferences, Atlas/network
-relationship, and risk/constraint compatibility — and produce a **Match
-Candidate**: which dimensions look compatible, which conflict, what's
-unknown, and what questions need a human to confirm. Not an automatic
-investment decision.
+### Ecosystem relationships (founder-entered and AI-discovered, side by side)
 
-**Governance rule that any future matching engine must preserve.** A
-match is not an approval. The pipeline stays: Discovery → Analysis →
-Potential Match → Founder Review → Approved Structure → Professional
-Review (where required) → Documentation → Execution. AI agents may
-identify and analyze potential matches. They must never: approve
-investments, promise returns, negotiate legal investment terms
-autonomously, determine securities-law status, determine investor
-qualification, execute investments, move money, or create legal
-documents outside an approved human/professional workflow. This is the
-same founder-control boundary the rest of Atlas already enforces (see
-**Founder control** above and the Investor Protocol's guardrails) —
-matching does not get an exception to it.
+`ecosystem_relationships` is a typed, directed edge between two nodes
+(`business`/`asset`/`external_entity` on either side) carrying
+`relationship_type`, `source` (`founder` or `ai_discovered`),
+`confidence`, `evidence`, `assumptions`, `unknowns`, `potential_effect`,
+and a `validation_status` lifecycle (`proposed` → `confirmed` /
+`rejected` / `ignored`). It's intentionally a separate table from the
+pre-existing generic `relationships` table (simple "related items" links
+on opportunities/projects) — merging them would either bloat the simple
+case or lose structure in the rich one.
 
-**Ecosystem matching (future).** The same system should eventually be
-able to notice relationships *between* Atlas's own holdings — e.g. an
-Atlas-owned business, an acquisition candidate, an existing customer
-base, available capital, and a prospective operator might collectively
-represent an opportunity that isn't visible evaluating any one of them
-alone. Atlas should eventually evaluate opportunities in the context of
-the whole ecosystem it already holds, not only individually.
+The `/ecosystem` page's "Discover relationships" button runs
+`discoverEcosystemRelationships` (`src/lib/actions/ecosystem.ts`), which
+hands the AI provider a catalog of Atlas's real businesses/assets/
+external entities (with real ids) and asks it to find relationships the
+founder hasn't entered — including negative/conflicting ones, not just
+synergy. Every candidate comes back with what it noticed, *why* Atlas
+noticed it (the observable basis), evidence, assumptions, unknowns, and
+what would validate it — and is inserted as `source: "ai_discovered"`,
+`validation_status: "proposed"`, **never** `confirmed`. The founder
+confirms, rejects, or ignores each one from the `/ecosystem` review
+queue. `anthropic.ts` also drops any candidate referencing an id that
+isn't in the catalog it was given, as a defense against hallucinated
+references.
 
-**Private network, not a public marketplace.** This is not, now or as
-envisioned, a public investment marketplace or a solicitation surface.
-It's a private system that knows what Atlas owns, what it's building,
-what it wants to acquire, what opportunities require, what capital and
-resources are available, what participants have expressed interest in,
-what structures are permitted, and what's happened historically — and
-uses that to find intelligent matches within the Atlas ecosystem itself,
-for the founder to review. The more businesses, assets, investors,
-operators, transactions, opportunities, and historical decisions Atlas
-accumulates, the more useful this eventually becomes — which is the
-actual argument for capturing all of it carefully now, per the rest of
-this README, even though none of the matching itself exists yet.
+Standalone economics, capital utility, and ecosystem utility are kept as
+separate concepts on purpose: `capital_utility_assessments` records
+analytical dimensions (borrowing capacity, collateral quality, lending
+accessibility, liquidity, cash-flow capacity, equity-generation
+potential, ability to support another Atlas business, encumbrance
+tolerance, strategic importance, saleability) as an assessment, never a
+financing guarantee. A relationship's `potential_effect` is a hypothesis,
+not a valuation input — nothing in this schema lets a hypothesized
+synergy feed back into recorded valuation just because Atlas generated
+it, which is what would create circular valuation logic.
 
-**Explicitly not part of this or any current phase:** the matching
-engine itself, investor solicitation, a public investor marketplace,
-any investor-facing functionality, any change to the current Investor
-Protocol guardrails (see above — they stand as written), and any
-autonomous investment authority for the AI. This section is a note for
-future architecture, not a roadmap commitment or a scope expansion of
-V0.1.
+### Prediction / evaluation lifecycle (not an AI score)
+
+`predictions` gives every trackable AI hypothesis a lifecycle:
+`proposed` → `under_evaluation` → `developing` → one of `validated` /
+`contradicted` / `expired` / `unable_to_evaluate`. **"Hasn't happened
+yet" is explicitly not failure** — `expired` and `unable_to_evaluate` are
+kept out of the accuracy calculation entirely, and `/intelligence`
+computes accuracy only over predictions that actually reached
+`validated`/`contradicted`. Evaluating a prediction also records
+`observed_outcome`, `variance`, and a `variance_reason`
+(execution/market/data_quality/reasoning_error/other) — a single
+inaccurate prediction is a data point, not proof the underlying
+relationship was wrong, which the variance-reason breakdown is there to
+help distinguish. Right now, predictions are created automatically for
+every AI-discovered ecosystem relationship that states a
+`potential_effect`; other AI analyses producing predictions is future
+work (see **Deferred**).
+
+### Opportunity Acquisition Layer
+
+`opportunity_provenance` (one row per opportunity) tracks where it came
+from (`discovery_channel`, including `ai_ecosystem_discovery`), its
+current `information_tier` (discovery / screening / diligence),
+`still_available`, and `last_observed_at` — so every opportunity can
+answer where it came from, what's known, and when it was last checked.
+`diligence_items` tracks specific documents (P&L, lease, tax return,
+equipment list, etc.) through requested → received → reviewed. Both are
+edited directly on the opportunity detail page, not a separate flag-gated
+surface. Nothing in this codebase scrapes, authenticates against, or
+automates interaction with any marketplace or listing site — provenance
+fields are for the founder (or a future admin, manually) to record what
+they already have; no NDA or legal workflow is automated here.
+
+### First usable milestone: Business Plan Analysis
+
+The milestone this phase was built around: open Atlas, enter a real
+business plan (via Quick Capture, then filling in the opportunity's full
+description), and get a structured, saved analysis back —
+`analyzeBusinessPlan` (`src/lib/actions/business-plan.ts`), surfaced as
+the "Business plan analysis" panel on every opportunity's detail page,
+**not** gated by `capital_ecosystem_enabled`. It reads the opportunity's
+description as plan text and returns facts, assumptions, unknowns,
+business model, revenue/cost structure, startup/working capital
+estimates, break-even assumptions, risks, missing information, diligence
+questions, fit with existing Atlas businesses/assets, ecosystem
+opportunities/conflicts, and benchmark comparisons — saved to
+`business_plan_analyses`, append-only like every other AI analysis in
+this app. It deliberately never reduces to a "good/bad business"
+verdict.
+
+### Deferred (intentionally, not oversights)
+
+- A **sophisticated statistical benchmarking engine** — `benchmark_comparisons`
+  is captured as free text per analysis today; the schema doesn't yet
+  need a normalized benchmark dataset, so one wasn't built.
+- **Predictions from AI analyses other than ecosystem-relationship
+  discovery** (e.g. a business-plan analysis's own estimates becoming
+  trackable predictions) — the lifecycle exists and is ready, just not
+  wired to every producer yet.
+- Any **matching engine logic** beyond the founder manually creating a
+  `match_candidates` row from the `/capital` hub and describing
+  compatible/conflicting dimensions themselves — an AI-assisted match
+  *suggestion* (as opposed to AI-assisted relationship *discovery*,
+  which is built) is future work.
+- **External entity deduplication/enrichment** — `external_entities` is
+  intentionally lightweight (not a CRM); nothing here merges
+  near-duplicate names or enriches records automatically.
+- Everything already listed as deferred under **Investor Protocol**
+  above still stands unchanged — this phase didn't touch that boundary.
+
+**Explicitly not part of this or any phase:** investor solicitation, a
+public investment marketplace, any investor-facing functionality,
+autonomous execution of financings or acquisitions, and anything that
+would move money or bind Atlas without an explicit founder action.
 
 ## Architecture notes
 
@@ -256,16 +351,30 @@ V0.1.
   `interface` here silently makes every `.insert()`/`.update()` call
   resolve to `never` with no runtime error.
 - `src/lib/queries.ts` — read queries used by server components.
+- `src/lib/queries-capital.ts` — read queries for the Capital & Ecosystem
+  module, kept in its own file rather than growing `queries.ts`
+  indefinitely. Includes `derivedBalance()`, which reduces a
+  `financing_events` ledger into a current balance at read time rather
+  than trusting a stored running total.
 - `src/lib/actions/*.ts` — `"use server"` mutations (create/update/status
-  transitions), one file per concern.
+  transitions), one file per concern — `businesses.ts`, `assets.ts`,
+  `financing.ts`, `capital.ts`, `ecosystem.ts`, `match.ts`,
+  `predictions.ts`, `provenance.ts`, and `business-plan.ts` are this
+  phase's additions.
 - `src/lib/ai/` — provider interface (`types.ts`), shared prompt builder
   (`prompt.ts`), `providers/mock.ts` and `providers/anthropic.ts`, and a
   factory (`index.ts`) that reads `AI_PROVIDER` from the environment. This
-  is the whole surface area a future provider swap touches.
+  is the whole surface area a future provider swap touches. This phase
+  added `analyzeBusinessPlan` and `discoverEcosystemRelationships` to the
+  provider interface, plus a shared `complete()`/`parseJsonResponse<T>()`
+  pair in `anthropic.ts` that both new methods (and the original
+  `analyzeOpportunity`) now use.
 - RLS policies grant access via `is_founder()`, not merely to anyone
   `authenticated` (see **Security model** below). `created_by` is
   recorded on every row so a future multi-user version can tighten
-  policies further without a schema change.
+  policies further without a schema change. Every table added in
+  `0004_capital_ecosystem_architecture.sql` follows this same policy
+  shape — no new access pattern was introduced.
 
 ## Security model
 
@@ -277,12 +386,13 @@ not just the UI:
   `public.is_founder()` (both defined in `0001_init.sql`) are the only
   source of truth: `is_founder()` is true only for the `auth.uid()` that
   matches the earliest-created row in `public.profiles`.
-- **Every RLS policy across both migrations checks `is_founder()`**, not
-  `auth.role() = 'authenticated'`. Being logged in is not, by itself,
+- **Every RLS policy across all four migrations checks `is_founder()`**,
+  not `auth.role() = 'authenticated'`. Being logged in is not, by itself,
   enough to read or write anything — a second account (however it gets
   created) gets zero rows back and every write it attempts is rejected by
   Postgres, not just hidden by the app. This applies identically to the
-  original V0.1 tables and to every Investor Protocol table.
+  original V0.1 tables, every Investor Protocol table, and every Capital
+  & Ecosystem table.
 - **Signup is a one-time bootstrap, not an open door.** The `signUp`
   server action (`src/lib/actions/auth.ts`) checks `founder_exists()` and
   refuses to create a second account; the `/login` page only renders the
@@ -317,3 +427,24 @@ not just the UI:
   has no real Supabase credentials. End-to-end verification of the actual
   data flows (capture → review → promote → decide) needs a real Supabase
   project and hasn't been run.
+- **`0004_capital_ecosystem_architecture.sql` was verified against a local
+  Postgres 16 instance** (schema apply, RLS behavior via a hand-rolled
+  `auth.uid()`/`auth.role()` stub, and derived-balance/derived-remaining
+  query logic) — the same approach used to verify 0001–0003 earlier. It
+  has **not** been run against a real Supabase project, and neither has
+  the rest of the UI built on top of it (Business/Asset/Capital/Ecosystem/
+  Intelligence pages, Business Plan Analysis, provenance/diligence) —
+  this sandbox has no live Supabase credentials or Anthropic API access
+  to exercise the real AI provider end-to-end. `tsc --noEmit` and
+  `next build` are clean, which catches type and compile errors but not
+  feature-level UI bugs; treat this module as needing a real smoke test
+  before relying on it.
+- **Migration strategy judgment call:** this phase was told to check
+  whether `0001`–`0003` had already been applied to a real Supabase
+  project and, if not, that it was fine to edit them in place before
+  first deployment. This sandbox has no way to check a real project's
+  migration state, so the safe assumption was made — a new forward
+  migration (`0004`) rather than editing existing ones. If `0001`–`0003`
+  in fact have never been deployed anywhere, folding `0004` into them (or
+  leaving it as-is) is a call the founder can make with that knowledge;
+  either is safe to run today since `0004` is purely additive.

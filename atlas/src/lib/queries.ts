@@ -182,6 +182,13 @@ export async function getBusinesses() {
   return (data ?? []) as Business[];
 }
 
+export async function getBusiness(id: string) {
+  const supabase = createClient();
+  const { data, error } = await supabase.from("businesses").select("*").eq("id", id).single();
+  if (error) return null;
+  return data as Business;
+}
+
 export interface RelatedItem {
   relationshipId: string;
   type: RelatableType;
@@ -343,4 +350,11 @@ export async function getAssets() {
   const { data, error } = await supabase.from("assets").select("*").order("name", { ascending: true });
   if (error) throw new Error(error.message);
   return (data ?? []) as Asset[];
+}
+
+export async function getAsset(id: string) {
+  const supabase = createClient();
+  const { data, error } = await supabase.from("assets").select("*").eq("id", id).single();
+  if (error) return null;
+  return data as Asset;
 }
