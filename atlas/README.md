@@ -26,13 +26,15 @@ root — Chapel is itself one of Atlas's own seed projects.
    ```
    supabase db push
    ```
-   or paste `0001_init.sql` then `0002_seed.sql` into the SQL editor.
+   or paste each migration file, in order, into the SQL editor:
    `0001_init.sql` creates the schema, RLS policies, and an
    `on_auth_user_created` trigger that mirrors new `auth.users` rows into
    `public.profiles`. `0002_seed.sql` seeds the founder's actual first
    Atlas principles and opportunities (soap, mushrooms, mushroom supplies,
    soy sauce, Blue Star, Chapel, and a business acquisition lead) — not
-   dummy data.
+   dummy data. `0003_investor_protocol.sql` adds the Investor Protocol
+   architectural foundation (see below) — data model only, disabled by
+   default.
 3. **Copy `.env.example` to `.env.local`** and fill in:
    - `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` — from
      Supabase project settings → API.
@@ -95,6 +97,49 @@ decisions, acquisition transaction management, mobile app. The schema
 (`businesses` table, `created_by` on every row, RLS scoped to
 "authenticated" rather than hard-coded to one user) leaves room for these
 without a rewrite, but none of it is implemented now.
+
+## Investor Protocol (architectural foundation only)
+
+Per the Investor Architecture Addendum: Atlas is currently founder-funded
+and single-user, and this is **not** an active investor onboarding,
+solicitation, or document-execution system — it's the data model and a
+minimal internal record-keeping UI so the founder can start capturing
+real investor relationships without a later rewrite.
+
+- **Gated by `feature_flags.investor_protocol_enabled`** (default
+  `false`, seeded in `0003_investor_protocol.sql`). Visiting `/investors`
+  while disabled shows a one-paragraph explanation and a single toggle —
+  no investor-facing UI exists anywhere in this app, only this founder
+  toggle. Flipping it only reveals founder-only CRUD; it flips nothing
+  else and sends nothing to anyone.
+- **One investor, many mandates.** `investor_profiles` is the persistent
+  relationship (identity, preferences, qualification status, relationship
+  history via the same `notes` table everything else uses).
+  `investment_mandates` is the specific investment — an investor can have
+  several, each against a different target (`target_type`/`target_id`
+  polymorphically points at Atlas itself, an opportunity, project,
+  business, asset, or an unmodeled future vehicle — same unenforced
+  polymorphic pattern as `public.relationships`).
+- **Rights are one structured document per mandate** (`investment_mandates.rights`,
+  typed as `RightsConfiguration` in `src/lib/types.ts`), not six more
+  tables — economics, control, involvement, liquidity, information access,
+  and Atlas network privileges, mirroring the addendum's "investor
+  switchboard" mockup. None of it is a legal promise; it's internal
+  modeling.
+- **Approved structures are authored by humans, never generated.**
+  `approved_structures` is a library the founder (eventually with
+  counsel) maintains; the app only stores and selects them. No structure
+  is "Approved" merely by being created here — `professional_reviews`
+  records who reviewed it, in what capacity, and their verdict, which is
+  what actually gates `approved_structures.review_status`.
+- **New `assets` table** (object-only, same minimal treatment as
+  `businesses`) exists because the addendum lists "asset" and
+  "asset-owning entity" as investment targets the original V0.1 schema
+  had no table for.
+- Explicitly **not** built, per the addendum: onboarding UI, investor
+  portal, solicitation, securities documents, subscription agreements,
+  actual investment acceptance, payment processing, KYC/AML, investor
+  qualification determinations, automated legal/tax decisions.
 
 ## Architecture notes
 

@@ -1,7 +1,7 @@
-import type { Note, RelatableType } from "@/lib/types";
+import type { Note, NotableParentType } from "@/lib/types";
 import { createNote } from "@/lib/actions/notes";
 
-export default function NotesSection({ notes, parentType, parentId }: { notes: Note[]; parentType: RelatableType; parentId: string }) {
+export default function NotesSection({ notes, parentType, parentId }: { notes: Note[]; parentType: NotableParentType; parentId: string }) {
   return (
     <div className="space-y-3">
       <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Notes &amp; research</h2>

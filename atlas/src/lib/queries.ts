@@ -1,15 +1,21 @@
 import { createClient } from "@/lib/supabase/server";
 import type {
   AiAnalysis,
+  ApprovedStructure,
+  Asset,
   AttentionState,
   Business,
   Decision,
   Experiment,
+  InvestmentMandate,
+  InvestorProfile,
+  NotableParentType,
   Note,
   Opportunity,
   OpportunityCategory,
   OpportunityStatus,
   Principle,
+  ProfessionalReview,
   Project,
   RelatableType,
   Relationship,
@@ -72,7 +78,7 @@ export async function getOpportunity(id: string) {
   return data as Opportunity;
 }
 
-export async function getNotesFor(parent: RelatableType, id: string) {
+export async function getNotesFor(parent: NotableParentType, id: string) {
   const supabase = createClient();
   const column = `${parent}_id`;
   const { data, error } = await supabase
@@ -217,7 +223,11 @@ export async function searchAll(q: string): Promise<SearchResult[]> {
     supabase.from("businesses").select("id,name,description").or(`name.ilike.${like},description.ilike.${like}`).limit(10),
     supabase.from("decisions").select("id,subject,decision").or(`subject.ilike.${like},decision.ilike.${like},reasoning.ilike.${like}`).limit(10),
     supabase.from("principles").select("id,title,description").or(`title.ilike.${like},description.ilike.${like}`).limit(10),
-    supabase.from("notes").select("id,body,opportunity_id,project_id,business_id").ilike("body", like).limit(10),
+    supabase
+      .from("notes")
+      .select("id,body,opportunity_id,project_id,business_id,investor_profile_id")
+      .ilike("body", like)
+      .limit(10),
   ]);
 
   const results: SearchResult[] = [];
@@ -237,9 +247,78 @@ export async function searchAll(q: string): Promise<SearchResult[]> {
       ? `/opportunities/${n.opportunity_id}`
       : n.project_id
         ? `/projects/${n.project_id}`
-        : "/";
+        : n.investor_profile_id
+          ? `/investors/${n.investor_profile_id}`
+          : "/";
     results.push({ type: "note", id: n.id, title: "Note", snippet: n.body.slice(0, 140), href });
   }
 
   return results;
+}
+
+// --- Investor Protocol reads (see src/lib/featureFlags.ts — everything
+// here is inert/hidden from the UI unless investor_protocol_enabled) ---
+
+export async function getInvestorProfiles() {
+  const supabase = createClient();
+  const { data, error } = await supabase.from("investor_profiles").select("*").order("name", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as InvestorProfile[];
+}
+
+export async function getInvestorProfile(id: string) {
+  const supabase = createClient();
+  const { data, error } = await supabase.from("investor_profiles").select("*").eq("id", id).single();
+  if (error) return null;
+  return data as InvestorProfile;
+}
+
+export async function getMandatesFor(investorProfileId: string) {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("investment_mandates")
+    .select("*")
+    .eq("investor_profile_id", investorProfileId)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as InvestmentMandate[];
+}
+
+export async function getMandate(id: string) {
+  const supabase = createClient();
+  const { data, error } = await supabase.from("investment_mandates").select("*").eq("id", id).single();
+  if (error) return null;
+  return data as InvestmentMandate;
+}
+
+export async function getApprovedStructures() {
+  const supabase = createClient();
+  const { data, error } = await supabase.from("approved_structures").select("*").order("name", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as ApprovedStructure[];
+}
+
+export async function getApprovedStructure(id: string) {
+  const supabase = createClient();
+  const { data, error } = await supabase.from("approved_structures").select("*").eq("id", id).single();
+  if (error) return null;
+  return data as ApprovedStructure;
+}
+
+export async function getProfessionalReviewsFor(approvedStructureId: string) {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("professional_reviews")
+    .select("*")
+    .eq("approved_structure_id", approvedStructureId)
+    .order("review_date", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as ProfessionalReview[];
+}
+
+export async function getAssets() {
+  const supabase = createClient();
+  const { data, error } = await supabase.from("assets").select("*").order("name", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Asset[];
 }

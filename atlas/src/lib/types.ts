@@ -38,6 +38,105 @@ export type NoteKind = "note" | "research";
 
 export type RelatableType = "opportunity" | "project" | "business";
 
+// Notes/decisions can attach to a couple of parent kinds relationships
+// can't (investor_profile/investment_mandate) — kept as a separate union
+// since the `relationships` table's CHECK constraint still only allows
+// RelatableType.
+export type NotableParentType = RelatableType | "investor_profile" | "investment_mandate";
+
+export type AssetStatus = "active" | "dormant" | "sold" | "retired";
+
+// --- Investor Protocol (architectural foundation, not an active
+// onboarding/solicitation system — see supabase/migrations/0003_investor_protocol.sql) ---
+
+export type InvestorEntityType = "individual" | "entity";
+
+export type InvestorRelationshipStatus = "prospective" | "active" | "inactive" | "declined";
+
+// Relationship classifications, NOT legal classifications.
+export type InvolvementLevel = "financial" | "informed" | "advisory" | "operating" | "strategic_partner";
+
+export type QualificationStatus = "unverified" | "self_attested" | "professionally_verified" | "not_applicable";
+
+export type ContributionType =
+  | "cash"
+  | "debt_capacity"
+  | "business"
+  | "real_estate"
+  | "equipment"
+  | "customers_distribution"
+  | "expertise"
+  | "labor"
+  | "relationships"
+  | "intellectual_property"
+  | "other"
+  | "combination";
+
+export type InvestmentTargetType = "atlas" | "opportunity" | "project" | "business" | "asset" | "other";
+
+export type MandateStatus = "draft" | "proposed" | "under_review" | "active" | "completed" | "terminated";
+
+export type StructureReviewStatus =
+  | "draft"
+  | "internally_designed"
+  | "professional_review"
+  | "approved"
+  | "active"
+  | "retired";
+
+export type ProfessionalType = "attorney" | "accountant" | "tax_advisor" | "other";
+
+export type ReviewApprovalStatus = "pending" | "approved" | "rejected" | "needs_revision";
+
+export type InformationAccessLevel = "standard" | "enhanced" | "strategic" | "deal_specific" | "atlas_partner";
+
+// Mirrors the "investor switchboard" concept from the addendum: one
+// structured document per mandate rather than six more tables. Every
+// field here is an internal configuration toggle, never a legal promise.
+export type RightsConfiguration = {
+  economics?: {
+    equity?: boolean;
+    preferred_economics?: boolean;
+    revenue_participation?: boolean;
+    profit_participation?: boolean;
+    debt?: boolean;
+    hybrid?: boolean;
+    other?: boolean;
+  };
+  control?: {
+    management?: boolean;
+    major_event_approval?: boolean;
+    ordinary_voting?: boolean;
+    board_seat?: boolean;
+    governance_rights?: boolean;
+  };
+  involvement?: InvolvementLevel;
+  liquidity?: {
+    fixed_maturity?: boolean;
+    company_buyback?: boolean;
+    atlas_buyback?: boolean;
+    underlying_sale?: boolean;
+    asset_sale?: boolean;
+    refinancing?: boolean;
+    secondary_transfer?: boolean;
+    distribution?: boolean;
+    negotiated_exit?: boolean;
+    no_defined_liquidity?: boolean;
+  };
+  information?: InformationAccessLevel;
+  atlas_access?: {
+    partner_network?: boolean;
+    office?: boolean;
+    meetings?: boolean;
+    events?: boolean;
+    introductions?: boolean;
+    educational_sessions?: boolean;
+    deal_discussions?: boolean;
+    shared_resources?: boolean;
+    other?: boolean;
+  };
+};
+
 export type Profile = {
   id: string;
   email: string | null;
@@ -101,6 +200,8 @@ export type Decision = {
   opportunity_id: string | null;
   project_id: string | null;
   business_id: string | null;
+  investor_profile_id: string | null;
+  investment_mandate_id: string | null;
   created_at: string;
   created_by: string | null;
 };
@@ -123,6 +224,8 @@ export type Note = {
   opportunity_id: string | null;
   project_id: string | null;
   business_id: string | null;
+  investor_profile_id: string | null;
+  investment_mandate_id: string | null;
   created_at: string;
   created_by: string | null;
 };
@@ -173,6 +276,98 @@ export type AiAnalysis = {
   input_context: Record<string, unknown>;
   result: AnalysisResult;
   created_at: string;
+  created_by: string | null;
+};
+
+export type FeatureFlag = {
+  key: string;
+  enabled: boolean;
+  description: string | null;
+  updated_at: string;
+  updated_by: string | null;
+};
+
+export type Asset = {
+  id: string;
+  name: string;
+  description: string | null;
+  status: AssetStatus;
+  business_id: string | null;
+  project_id: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+};
+
+export type InvestorProfile = {
+  id: string;
+  name: string;
+  entity_type: InvestorEntityType;
+  contact_email: string | null;
+  contact_phone: string | null;
+  relationship_status: InvestorRelationshipStatus;
+  preferred_involvement_level: InvolvementLevel | null;
+  preferred_reporting_frequency: string | null;
+  preferred_investment_horizon: string | null;
+  investment_interests: string | null;
+  capabilities_contributions: string | null;
+  atlas_network_preferences: string | null;
+  qualification_status: QualificationStatus;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+};
+
+export type ApprovedStructure = {
+  id: string;
+  name: string;
+  description: string | null;
+  permitted_configurations: Record<string, unknown>;
+  required_fields: string[];
+  prohibited_combinations: string | null;
+  document_templates: unknown[];
+  review_status: StructureReviewStatus;
+  version: string;
+  effective_date: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+};
+
+export type ProfessionalReview = {
+  id: string;
+  approved_structure_id: string;
+  reviewer_name: string;
+  professional_type: ProfessionalType;
+  review_date: string;
+  document_reference: string | null;
+  comments: string | null;
+  approval_status: ReviewApprovalStatus;
+  created_at: string;
+  created_by: string | null;
+};
+
+export type InvestmentMandate = {
+  id: string;
+  investor_profile_id: string;
+  target_type: InvestmentTargetType;
+  target_id: string | null;
+  target_note: string | null;
+  investment_amount: number | null;
+  investment_type: string | null;
+  contribution_types: ContributionType[];
+  contribution_notes: string | null;
+  rights: RightsConfiguration;
+  term: string | null;
+  special_conditions: string | null;
+  liquidity_note: string | null;
+  status: MandateStatus;
+  approved_structure_id: string | null;
+  documents_note: string | null;
+  created_at: string;
+  updated_at: string;
   created_by: string | null;
 };
 
@@ -247,6 +442,42 @@ export type Database = {
         Row: AiAnalysis;
         Insert: Partial<AiAnalysis> & { opportunity_id: string; provider: string; result: AnalysisResult };
         Update: Partial<AiAnalysis>;
+        Relationships: [];
+      };
+      feature_flags: {
+        Row: FeatureFlag;
+        Insert: Partial<FeatureFlag> & { key: string };
+        Update: Partial<FeatureFlag>;
+        Relationships: [];
+      };
+      assets: {
+        Row: Asset;
+        Insert: Partial<Asset> & { name: string };
+        Update: Partial<Asset>;
+        Relationships: [];
+      };
+      investor_profiles: {
+        Row: InvestorProfile;
+        Insert: Partial<InvestorProfile> & { name: string };
+        Update: Partial<InvestorProfile>;
+        Relationships: [];
+      };
+      approved_structures: {
+        Row: ApprovedStructure;
+        Insert: Partial<ApprovedStructure> & { name: string };
+        Update: Partial<ApprovedStructure>;
+        Relationships: [];
+      };
+      professional_reviews: {
+        Row: ProfessionalReview;
+        Insert: Partial<ProfessionalReview> & { approved_structure_id: string; reviewer_name: string };
+        Update: Partial<ProfessionalReview>;
+        Relationships: [];
+      };
+      investment_mandates: {
+        Row: InvestmentMandate;
+        Insert: Partial<InvestmentMandate> & { investor_profile_id: string };
+        Update: Partial<InvestmentMandate>;
         Relationships: [];
       };
     };
