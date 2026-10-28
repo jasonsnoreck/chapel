@@ -1,0 +1,1445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Chapel Facility Map</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { overflow: hidden; background: #000;
+         font-family: 'Courier New', monospace;
+         touch-action: none; }
+  canvas { display: block; touch-action: none; }
+
+  /* ── Desktop crosshair ── */
+  #crosshair {
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    color: rgba(255,255,255,.75); font-size: 22px; line-height: 1;
+    pointer-events: none; z-index: 10; user-select: none;
+    transition: color .1s;
+  }
+
+  /* ── Desktop instruction bar (above status bar) ── */
+  #instr {
+    position: fixed; bottom: 52px; left: 50%;
+    transform: translateX(-50%);
+    color: rgba(165,185,220,.7); font-size: 11px;
+    background: rgba(0,0,0,.6); padding: 5px 14px;
+    border: 1px solid rgba(70,100,170,.2);
+    pointer-events: none; z-index: 10; letter-spacing: .3px;
+    white-space: nowrap;
+  }
+
+  /* ── HUD title ── */
+  #hud {
+    position: fixed; top: 14px; left: 16px;
+    color: rgba(70,150,255,.6); font-size: 10px;
+    text-transform: uppercase; letter-spacing: 2.5px;
+    pointer-events: none; z-index: 10;
+    font-family: 'Courier New', monospace;
+  }
+
+  /* ── Mobile instruction ── */
+  #mob-instr {
+    position: fixed; top: 14px; left: 50%;
+    transform: translateX(-50%);
+    color: rgba(140,170,220,.7); font-size: 11px;
+    background: rgba(0,0,0,.5); padding: 5px 14px;
+    border: 1px solid rgba(60,90,160,.25);
+    pointer-events: none; z-index: 10; white-space: nowrap;
+    display: none; letter-spacing: .3px;
+    font-family: 'Courier New', monospace;
+  }
+
+  /* ── Virtual joystick ── */
+  #joystick-wrap {
+    position: fixed; bottom: 72px; left: 28px;
+    width: 120px; height: 120px;
+    display: none;
+    z-index: 20; touch-action: none; user-select: none;
+  }
+  #joystick-base {
+    position: absolute; inset: 0; border-radius: 50%;
+    background: rgba(255,255,255,.07);
+    border: 2px solid rgba(255,255,255,.18);
+  }
+  #joystick-knob {
+    position: absolute; width: 48px; height: 48px; border-radius: 50%;
+    background: rgba(255,255,255,.22);
+    border: 2px solid rgba(255,255,255,.45);
+    top: 36px; left: 36px; pointer-events: none;
+  }
+
+  /* ── STATUS BAR ─────────────────────────────────────────────────────────────
+     Professional facilities-dashboard style: system sans-serif, muted palette,
+     subtle dividers. No gamer fonts or harsh colours.
+  ── */
+  #statusbar {
+    position: fixed; bottom: 0; left: 0; right: 0; height: 44px;
+    background: rgba(10, 11, 14, 0.96);
+    border-top: 1px solid rgba(255,255,255,.07);
+    display: flex; align-items: stretch;
+    z-index: 15; pointer-events: none;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+                 'Helvetica Neue', Arial, sans-serif;
+  }
+  .sb-cell {
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 0 18px; min-width: 0;
+  }
+  .sb-cell + .sb-cell {
+    border-left: 1px solid rgba(255,255,255,.07);
+  }
+  .sb-label {
+    font-size: 9px; text-transform: uppercase; letter-spacing: 1.3px;
+    color: rgba(255,255,255,.28); margin-bottom: 2px; white-space: nowrap;
+  }
+  .sb-value {
+    font-size: 13px; font-weight: 500; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+    color: rgba(255,255,255,.82);
+    transition: color .2s;
+  }
+  .sb-value.sb-dim  { color: rgba(255,255,255,.25); }
+  .sb-value.sb-live { color: #6fb8ff; }
+
+  /* Right-align the last cell and let it take remaining space */
+  #sb-cell-target { flex: 1; }
+
+  /* ── Info Panel ── */
+  #panel {
+    position: fixed; top: 50%; right: 24px;
+    transform: translateY(-50%);
+    width: 290px;
+    background: rgba(5,9,20,.97);
+    border: 1px solid rgba(35,65,125,.6);
+    border-left: 3px solid #4a9eff;
+    color: #aec8e0; padding: 22px 18px 16px;
+    z-index: 30; display: none;
+    max-height: calc(100vh - 60px); overflow-y: auto;
+  }
+  #panel h2 {
+    color: #58b2ff; font-size: 14px; font-weight: normal;
+    text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 2px;
+    font-family: 'Courier New', monospace;
+  }
+  #ptype {
+    color: #2e4e6e; font-size: 9px;
+    text-transform: uppercase; letter-spacing: 2.5px; margin-bottom: 14px;
+    font-family: 'Courier New', monospace;
+  }
+  .sr {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 5px 0; border-bottom: 1px solid rgba(20,40,75,.9); font-size: 11px;
+    font-family: 'Courier New', monospace;
+  }
+  .sl { color: #2e4e6e; }
+  .sv { color: #88c6ff; font-weight: bold; text-align: right; padding-left: 8px; }
+  #obtn {
+    display: block; width: 100%; margin-top: 16px; padding: 10px;
+    background: rgba(14,40,80,.85); border: 1px solid #2e68bb;
+    color: #48a8ff; font-family: 'Courier New', monospace; font-size: 11px;
+    cursor: pointer; text-transform: uppercase; letter-spacing: 1.5px;
+    transition: background .15s; -webkit-tap-highlight-color: transparent;
+  }
+  #obtn:hover, #obtn:active { background: rgba(30,72,145,.9); color: #88ccff; }
+  #cbtn {
+    position: absolute; top: 10px; right: 12px;
+    background: none; border: none; color: #1e3e5e;
+    cursor: pointer; font-size: 15px; font-family: inherit;
+    transition: color .15s; -webkit-tap-highlight-color: transparent;
+  }
+  #cbtn:hover, #cbtn:active { color: #58b2ff; }
+
+  /* ── Panel tabs ── */
+  .ptabs {
+    display: flex; gap: 2px; margin-bottom: 14px;
+  }
+  .ptab {
+    flex: 1; padding: 7px 2px; background: none; border: none;
+    border-bottom: 2px solid rgba(30,60,120,.4);
+    color: #2e5e8e; font-family: 'Courier New', monospace;
+    font-size: 9px; text-transform: uppercase; letter-spacing: 1.1px;
+    cursor: pointer; transition: color .15s, border-color .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .ptab.active { color: #58b2ff; border-bottom-color: #4a9eff; }
+  .ptab:hover  { color: #88c6ff; }
+
+  /* ── History entries ── */
+  .phist-row {
+    padding: 8px 0; border-bottom: 1px solid rgba(20,40,75,.9);
+  }
+  .phist-date {
+    font-family: 'Courier New', monospace; font-size: 9px;
+    color: #2e5e8e; margin-bottom: 3px; letter-spacing: .5px;
+  }
+  .phist-note {
+    font-family: 'Courier New', monospace; font-size: 11px;
+    color: #88c6ff; line-height: 1.45;
+  }
+
+  /* ── Doc / manual link button ── */
+  .pdoc-btn {
+    display: block; margin-top: 14px; padding: 9px 12px;
+    background: rgba(14,40,80,.6); border: 1px solid #2e68bb;
+    color: #48a8ff; font-family: 'Courier New', monospace; font-size: 10px;
+    text-decoration: none; text-transform: uppercase; letter-spacing: 1.2px;
+    transition: background .15s; -webkit-tap-highlight-color: transparent;
+    text-align: center;
+  }
+  .pdoc-btn:hover, .pdoc-btn:active { background: rgba(30,72,145,.8); color: #88ccff; }
+
+  /* ── Touch-device overrides ── */
+  @media (pointer: coarse) {
+    #panel {
+      right: 0; left: 0; top: auto; bottom: 44px; /* above status bar */
+      transform: none; width: 100%; max-height: 58vh;
+      border-left: none; border-top: 3px solid #4a9eff;
+      border-radius: 14px 14px 0 0;
+      padding: 24px 20px 28px;
+      touch-action: pan-y; overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    #panel h2 { font-size: 17px; margin-bottom: 4px; }
+    #ptype    { font-size: 11px; letter-spacing: 2px; margin-bottom: 18px; }
+    .sr       { padding: 11px 0; font-size: 13px; }
+    .sl       { font-size: 12px; }
+    .sv       { font-size: 13px; }
+    .ptab     { padding: 11px 2px; font-size: 10px; }
+    .phist-row  { padding: 11px 0; }
+    .phist-date { font-size: 11px; }
+    .phist-note { font-size: 13px; }
+    .pdoc-btn   { padding: 14px; font-size: 12px; margin-top: 18px; }
+    #obtn     { padding: 18px; font-size: 14px; letter-spacing: 2px;
+                margin-top: 22px; border-radius: 4px; }
+    #cbtn     { top: 14px; right: 14px; font-size: 22px; padding: 8px;
+                min-width: 44px; min-height: 44px;
+                display: flex; align-items: center; justify-content: center; }
+  }
+
+  /* ── Automap overlay ── */
+  #map-overlay {
+    position: fixed; inset: 0; z-index: 50;
+    background: rgba(6, 8, 14, 0.97);
+    display: none; flex-direction: column;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  #map-overlay.open { display: flex; }
+  #map-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 20px; height: 44px; flex-shrink: 0;
+    border-bottom: 1px solid rgba(255,255,255,.07);
+    background: rgba(10,11,14,.98);
+  }
+  #map-title {
+    font-size: 11px; font-weight: 600; letter-spacing: 2px;
+    text-transform: uppercase; color: rgba(255,255,255,.55);
+  }
+  #map-hint {
+    font-size: 11px; color: rgba(255,255,255,.22); letter-spacing: .3px;
+  }
+  #map-close-btn {
+    display: none; background: none; border: none; padding: 8px;
+    color: rgba(255,255,255,.32); font-size: 16px; cursor: pointer;
+    line-height: 1; -webkit-tap-highlight-color: transparent;
+    min-width: 44px; min-height: 44px;
+    align-items: center; justify-content: center;
+  }
+  #map-body {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    padding: 20px; overflow: hidden; min-height: 0;
+  }
+  #map-canvas { display: block; }
+  #map-btn {
+    position: fixed; top: 12px; right: 14px; z-index: 20;
+    width: 40px; height: 40px; border-radius: 8px;
+    background: rgba(10,11,14,.82); border: 1px solid rgba(255,255,255,.13);
+    color: rgba(255,255,255,.5); line-height: 1;
+    display: none; align-items: center; justify-content: center;
+    cursor: pointer; -webkit-tap-highlight-color: transparent; padding: 0;
+  }
+  /* ── Schematic overlay ── */
+  #sch-overlay {
+    position: fixed; inset: 0; z-index: 50;
+    background: rgba(6, 8, 14, 0.97);
+    display: none; flex-direction: column;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  #sch-overlay.open { display: flex; }
+  #sch-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 20px; height: 44px; flex-shrink: 0;
+    border-bottom: 1px solid rgba(255,255,255,.07);
+    background: rgba(10,11,14,.98);
+  }
+  #sch-title {
+    font-size: 11px; font-weight: 600; letter-spacing: 2px;
+    text-transform: uppercase; color: rgba(255,255,255,.55);
+  }
+  #sch-hint {
+    font-size: 11px; color: rgba(255,255,255,.22); letter-spacing: .3px;
+  }
+  #sch-close-btn {
+    display: none; background: none; border: none; padding: 8px;
+    color: rgba(255,255,255,.32); font-size: 16px; cursor: pointer;
+    line-height: 1; -webkit-tap-highlight-color: transparent;
+    min-width: 44px; min-height: 44px;
+    align-items: center; justify-content: center;
+  }
+  #sch-body {
+    flex: 1; overflow-y: auto; padding: 20px 20px 36px;
+    -webkit-overflow-scrolling: touch;
+  }
+  #sch-btn {
+    position: fixed; top: 12px; right: 60px; z-index: 20;
+    width: 40px; height: 40px; border-radius: 8px;
+    background: rgba(10,11,14,.82); border: 1px solid rgba(255,255,255,.13);
+    color: rgba(255,255,255,.5); line-height: 1;
+    display: none; align-items: center; justify-content: center;
+    cursor: pointer; -webkit-tap-highlight-color: transparent; padding: 0;
+  }
+  /* ── Panel schedule rows ── */
+  .sch-panel { margin-bottom: 32px; }
+  .sch-panel-hdr {
+    font-size: 11px; font-weight: 700; letter-spacing: 2.5px;
+    text-transform: uppercase; color: rgba(255,255,255,.35);
+    padding-bottom: 10px; margin-bottom: 6px;
+    border-bottom: 1px solid rgba(255,255,255,.07);
+  }
+  .sch-circuit {
+    display: grid; grid-template-columns: 36px 1fr auto;
+    align-items: center; gap: 10px;
+    padding: 11px 12px; margin-bottom: 3px;
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.06); border-radius: 4px;
+    cursor: pointer; transition: background .12s, border-color .12s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .sch-circuit:hover, .sch-circuit:active {
+    background: rgba(74,158,255,.07); border-color: rgba(74,158,255,.18);
+  }
+  .sch-cnum {
+    font-size: 11px; font-weight: 700; color: rgba(255,255,255,.28);
+    font-family: 'Courier New', monospace;
+  }
+  .sch-cdesc {
+    font-size: 13px; color: rgba(255,255,255,.78);
+    min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .sch-cmeta { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+  .sch-volt  { font-size: 11px; font-weight: 600; font-family: 'Courier New', monospace; }
+  .sch-amp   { font-size: 11px; color: rgba(255,255,255,.28); font-family: 'Courier New', monospace; }
+  .sch-cnt   {
+    font-size: 10px; color: rgba(255,255,255,.22); white-space: nowrap;
+    background: rgba(255,255,255,.07); padding: 2px 6px; border-radius: 3px;
+  }
+  @media (pointer: coarse) {
+    #map-btn      { display: flex; }
+    #map-hint     { display: none; }
+    #map-close-btn { display: flex; }
+    #sch-btn      { display: flex; }
+    #sch-hint     { display: none; }
+    #sch-close-btn { display: flex; }
+    .sch-circuit  { padding: 14px 12px; }
+    .sch-cdesc    { font-size: 14px; }
+    .sch-volt, .sch-amp { font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Desktop UI -->
+<div id="crosshair">+</div>
+<div id="instr">Click to start &nbsp;·&nbsp; WASD = move &nbsp;·&nbsp; Mouse = look &nbsp;·&nbsp; Click marker = inspect &nbsp;·&nbsp; Tab = map &nbsp;·&nbsp; M = schematic &nbsp;·&nbsp; ESC = release</div>
+
+<!-- Both -->
+<div id="hud">Chapel Facility Map · Demo</div>
+
+<!-- Mobile UI -->
+<div id="mob-instr">Drag to look &nbsp;·&nbsp; Joystick to move &nbsp;·&nbsp; Tap marker to inspect</div>
+<div id="joystick-wrap">
+  <div id="joystick-base"></div>
+  <div id="joystick-knob"></div>
+</div>
+
+<!-- Status bar -->
+<div id="statusbar">
+  <div class="sb-cell">
+    <div class="sb-label">Location</div>
+    <div class="sb-value sb-dim" id="sb-room">—</div>
+  </div>
+  <div class="sb-cell" id="sb-cell-target">
+    <div class="sb-label">Targeting</div>
+    <div class="sb-value sb-dim" id="sb-target">—</div>
+  </div>
+</div>
+
+<!-- Info panel -->
+<div id="panel">
+  <button id="cbtn">✕</button>
+  <h2 id="pname"></h2>
+  <div id="ptype"></div>
+  <div id="pspecs"></div>
+  <button id="obtn">⟳ &nbsp;Order Replacement</button>
+</div>
+
+<!-- Automap overlay -->
+<div id="map-overlay">
+  <div id="map-header">
+    <span id="map-title">Floor Plan</span>
+    <span id="map-hint">Tab to close &nbsp;·&nbsp; Click room to navigate</span>
+    <button id="map-close-btn" aria-label="Close map">✕</button>
+  </div>
+  <div id="map-body">
+    <canvas id="map-canvas"></canvas>
+  </div>
+</div>
+
+<!-- Mobile map toggle button -->
+<button id="map-btn" aria-label="Toggle floor plan">
+  <svg width="18" height="18" viewBox="0 0 18 18" fill="none"
+       stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="1" y="1" width="7" height="7" rx="1"/>
+    <rect x="10" y="1" width="7" height="7" rx="1"/>
+    <rect x="1" y="10" width="7" height="7" rx="1"/>
+    <rect x="10" y="10" width="7" height="7" rx="1"/>
+  </svg>
+</button>
+
+<!-- Schematic overlay -->
+<div id="sch-overlay">
+  <div id="sch-header">
+    <span id="sch-title">Panel Schedule</span>
+    <span id="sch-hint">M to close &nbsp;·&nbsp; Click circuit to navigate</span>
+    <button id="sch-close-btn" aria-label="Close schematic">✕</button>
+  </div>
+  <div id="sch-body"></div>
+</div>
+
+<!-- Mobile schematic toggle button -->
+<button id="sch-btn" aria-label="Toggle panel schedule">
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+    <rect x="2"  y="2"    width="3" height="2.5" rx=".5" opacity=".45"/>
+    <rect x="7"  y="2"    width="7" height="2.5" rx=".5"/>
+    <rect x="2"  y="6.75" width="3" height="2.5" rx=".5" opacity=".45"/>
+    <rect x="7"  y="6.75" width="7" height="2.5" rx=".5"/>
+    <rect x="2"  y="11.5" width="3" height="2.5" rx=".5" opacity=".45"/>
+    <rect x="7"  y="11.5" width="7" height="2.5" rx=".5"/>
+  </svg>
+</button>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ASSET DATA
+// ─────────────────────────────────────────────────────────────────────────────
+const ASSETS = [
+  {
+    id: 'fixture-main', name: 'Main Hall Fixture', type: 'Light Fixture',
+    pos: [0, 3.3, 0], color: 0xffe055,
+    circuit: { panel: 'Panel A', num: '6', volts: 120, amps: 15 },
+    specs: [
+      ['Wattage','120W LED'],['Base Type','E26 Medium'],
+      ['Color Temp','4000K Neutral White'],['Lumens','1,600 lm'],
+      ['Last Replaced','2024-08-12'],
+    ],
+  },
+  {
+    id: 'pump-circ', name: 'Boiler Room Pump', type: 'Circulation Pump',
+    pos: [15, 0.75, 0], color: 0xff4422,
+    circuit: { panel: 'Panel B', num: '1', volts: 240, amps: 20 },
+    specs: [
+      ['Model',       'Grundfos UP15-42F'],
+      ['Serial No.',  'UP15-84732-A'],
+      ['Flow Rate',   '4.0 GPM'],
+      ['Head Pressure','42 ft'],
+      ['Voltage',     '120V / 60 Hz'],
+      ['Installed',   '2021-03-05'],
+    ],
+    docs: [
+      { label: '↗ Installation & Operation Manual (PDF)', url: '#' },
+    ],
+    maintenance: {
+      schedule: 'Quarterly',
+      nextDue:  '2026-09-01',
+    },
+    history: [
+      { date: '2026-03-14', note: 'Quarterly inspection — lubricated bearings, checked seals. No issues.' },
+      { date: '2025-12-02', note: 'Filter replaced, impeller cleared of debris.' },
+      { date: '2025-09-08', note: 'Annual inspection — passed. Flow rate confirmed at 4.0 GPM.' },
+    ],
+  },
+  {
+    id: 'sprinkler-1', name: 'Storage Sprinkler Head', type: 'Wet-Pipe Sprinkler',
+    pos: [0, 3.7, -14], color: 0x33ffaa,
+    specs: [
+      ['Head Type','Pendent / Standard Response'],['K-Factor','5.6'],
+      ['Temp Rating','155°F (Ordinary)'],['Coverage Area','130 sq ft'],
+      ['Last Inspected','2025-01-18'],
+    ],
+  },
+  {
+    id: 'emerg-exit', name: 'Exit / Emergency Unit', type: 'Emergency Lighting',
+    pos: [-6.5, 2.9, 6.5], color: 0xff3344,
+    circuit: { panel: 'Panel A', num: '3', volts: 277, amps: 20 },
+    specs: [
+      ['Type','Combo Exit + Emergency'],['Battery Backup','90 minutes'],
+      ['LED Colors','Red face / White floods'],['Self-Test Cycle','Monthly automatic'],
+      ['Last Manual Test','2025-05-30'],
+    ],
+  },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ROOM DEFINITIONS
+// Room 1 – Main Hall:    x[-8, 8],   z[-8,  8]
+// Room 2 – Boiler Room:  x[ 8,24],   z[-4,  4]
+// Room 3 – Storage:      x[-4, 4],   z[-22,-8]
+// Doorway Hall↔Boiler:   x=8,  z[-2, 2]   (4 wide, full height)
+// Doorway Hall↔Storage:  z=-8, x[-2, 2]   (4 wide, full height)
+// ─────────────────────────────────────────────────────────────────────────────
+const ROOM_LABELS = [
+  { label: 'Main Hall',   xMin: -8, xMax:  8, zMin:  -8, zMax:  8 },
+  { label: 'Boiler Room', xMin:  8, xMax: 24, zMin:  -4, zMax:  4 },
+  { label: 'Storage',     xMin: -4, xMax:  4, zMin: -22, zMax: -8 },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WALKABLE ZONES  (rooms + doorway bridges, inset by player radius R=0.4)
+// ─────────────────────────────────────────────────────────────────────────────
+const R = 0.4; // player body radius
+const WALKABLE = [
+  // Main Hall
+  { xMin: -8+R, xMax:  8-R, zMin: -8+R, zMax:  8-R },
+  // Boiler Room
+  { xMin:  8+R, xMax: 24-R, zMin: -4+R, zMax:  4-R },
+  // Storage
+  { xMin: -4+R, xMax:  4-R, zMin:-22+R, zMax: -8-R },
+  // Doorway: Hall ↔ Boiler  (x≈8, z-span [-2,2])
+  { xMin:  8-R, xMax:  8+R, zMin: -2+R, zMax:  2-R },
+  // Doorway: Hall ↔ Storage  (z≈-8, x-span [-2,2])
+  { xMin: -2+R, xMax:  2-R, zMin: -8-R, zMax: -8+R },
+];
+
+function isWalkable(x, z) {
+  for (const b of WALKABLE)
+    if (x >= b.xMin && x <= b.xMax && z >= b.zMin && z <= b.zMax) return true;
+  return false;
+}
+
+// Returns [resolvedX, resolvedZ] with wall-sliding
+function resolveCollision(oldX, oldZ, newX, newZ) {
+  if (isWalkable(newX, newZ)) return [newX, newZ];
+  if (isWalkable(newX, oldZ)) return [newX, oldZ]; // slide along X
+  if (isWalkable(oldX, newZ)) return [oldX, newZ]; // slide along Z
+  return [oldX, oldZ];                              // fully blocked
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUTOMAP DATA
+// ─────────────────────────────────────────────────────────────────────────────
+const MAP_WORLD = { minX: -8, maxX: 24, minZ: -22, maxZ: 8 };
+
+const MAP_ROOMS = [
+  { label: 'Main Hall',   fill: 'rgba(38,44,62,1)',  x1: -8, z1:  -8, x2:  8, z2:  8 },
+  { label: 'Boiler Room', fill: 'rgba(50,28,14,1)',  x1:  8, z1:  -4, x2: 24, z2:  4 },
+  { label: 'Storage',     fill: 'rgba(14,22,48,1)',  x1: -4, z1: -22, x2:  4, z2: -8 },
+];
+
+const MAP_WALLS = [
+  // Main Hall
+  [-8, 8,   8, 8],  [-8,-8,  -8, 8],     // N / W walls (full)
+  [-8,-8,  -2,-8],  [ 2,-8,   8,-8],     // S wall (gap at x[-2,2] → Storage doorway)
+  [ 8,-8,   8,-2],  [ 8, 2,   8, 8],     // E wall (gap at z[-2,2] → Boiler doorway)
+  // Boiler Room
+  [24,-4,  24, 4],                        // E wall
+  [ 8,-4,  24,-4],  [ 8, 4,  24, 4],     // N / S walls
+  // Storage
+  [-4,-22,  4,-22],                       // N wall
+  [-4,-22, -4, -8], [ 4,-22,  4, -8],    // W / E walls
+  [-4,-8,  -2, -8], [ 2,-8,   4, -8],    // S wall (gap at x[-2,2] → Main Hall doorway)
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DEVICE DETECTION
+// ─────────────────────────────────────────────────────────────────────────────
+const isTouchOnly = window.matchMedia('(pointer: coarse)').matches;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SCENE + RENDERER
+// ─────────────────────────────────────────────────────────────────────────────
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x050508);
+scene.fog = new THREE.Fog(0x050508, 22, 60);
+
+const camera = new THREE.PerspectiveCamera(80, innerWidth / innerHeight, 0.05, 80);
+camera.position.set(0, 1.7, 4);
+
+const renderer = new THREE.WebGLRenderer({ antialias: false });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LIGHTING
+// ─────────────────────────────────────────────────────────────────────────────
+scene.add(new THREE.AmbientLight(0xffffff, 0.50));
+scene.add(new THREE.HemisphereLight(0x8899cc, 0x334455, 0.80));
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PROCEDURAL TEXTURES
+// ─────────────────────────────────────────────────────────────────────────────
+function mkTex(size, fn) {
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  fn(c.getContext('2d'), size);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+function noiseTex(r, g, b, size, vari) {
+  return mkTex(size, (ctx, s) => {
+    const img = ctx.createImageData(s, s), d = img.data;
+    for (let i = 0; i < s*s*4; i += 4) {
+      const f = 1 + (Math.random() - 0.5) * vari * 2;
+      d[i]   = Math.min(255, r*f|0);
+      d[i+1] = Math.min(255, g*f|0);
+      d[i+2] = Math.min(255, b*f|0);
+      d[i+3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+  });
+}
+function tileTex(r, g, b, size, tileSize, vari) {
+  return mkTex(size, (ctx, s) => {
+    const img = ctx.createImageData(s, s), d = img.data;
+    for (let i = 0; i < s*s*4; i += 4) {
+      const f = 1 + (Math.random() - 0.5) * vari * 2;
+      d[i]   = Math.min(255, r*f|0);
+      d[i+1] = Math.min(255, g*f|0);
+      d[i+2] = Math.min(255, b*f|0);
+      d[i+3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+    ctx.strokeStyle = 'rgba(0,0,0,0.28)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < s; x += tileSize) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, s); ctx.stroke();
+    }
+    for (let y = 0; y < s; y += tileSize) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(s, y); ctx.stroke();
+    }
+  });
+}
+function lm(tex, rx, ry) {
+  const t = tex.clone();
+  t.repeat.set(rx, ry);
+  t.needsUpdate = true;
+  return new THREE.MeshLambertMaterial({ map: t });
+}
+
+const TX = {
+  hallFloor:  tileTex( 88, 88,112, 256, 64, 0.12),
+  hallCeil:   noiseTex( 52, 52, 66, 128, 0.08),
+  hallWall:   noiseTex(105,105,130, 128, 0.13),
+  brlrFloor:  tileTex( 78, 48, 26, 256, 56, 0.15),
+  brlrCeil:   noiseTex( 44, 28, 14, 128, 0.08),
+  brlrWall:   noiseTex(128, 70, 36, 128, 0.15),
+  storFloor:  tileTex( 40, 58, 92, 256, 64, 0.08),
+  storCeil:   noiseTex( 26, 34, 55, 128, 0.06),
+  storWall:   noiseTex( 58, 90,142, 128, 0.12),
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GEOMETRY HELPER
+// ─────────────────────────────────────────────────────────────────────────────
+function slab(w, h, d, colorOrMat, x, y, z) {
+  const mat = (colorOrMat && colorOrMat.isMaterial)
+    ? colorOrMat
+    : new THREE.MeshLambertMaterial({ color: colorOrMat });
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  m.position.set(x, y, z);
+  scene.add(m);
+  return m;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ROOM 1 – MAIN HALL
+// ─────────────────────────────────────────────────────────────────────────────
+slab(16, .25, 16, lm(TX.hallFloor, 2, 2),  0, -.125,  0);
+slab(16, .25, 16, lm(TX.hallCeil,  2, 2),  0, 4.125,  0);
+slab(16,  4,  .25,lm(TX.hallWall,  2, 1),  0,    2,   8);
+slab(.25,  4,  16,lm(TX.hallWall,  1, 1), -8,    2,   0);
+slab( 6,  4,  .25,lm(TX.hallWall,  1, 1), -5,    2,  -8);
+slab( 6,  4,  .25,lm(TX.hallWall,  1, 1),  5,    2,  -8);
+slab(.25,  4,   6,lm(TX.hallWall,  1, 1),  8,    2,  -5);
+slab(.25,  4,   6,lm(TX.hallWall,  1, 1),  8,    2,   5);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ROOM 2 – BOILER ROOM
+// ─────────────────────────────────────────────────────────────────────────────
+slab(16, .25,  8, lm(TX.brlrFloor, 2, 1), 16, -.125,  0);
+slab(16, .25,  8, lm(TX.brlrCeil,  2, 1), 16, 4.125,  0);
+slab(.25,  4,   8,lm(TX.brlrWall,  1, 1), 24,    2,   0);
+slab(16,  4,  .25,lm(TX.brlrWall,  2, 1), 16,    2,   4);
+slab(16,  4,  .25,lm(TX.brlrWall,  2, 1), 16,    2,  -4);
+slab( 3, 2.5,   2, 0x22100a, 21,  1.25,  0);
+slab( 3,  .1,   2, 0x5a3018, 21,  2.55,  0);
+slab(.15, 2.5, .15,0x6a4020, 21, 1.25, -.8);
+slab(.15, 2.5, .15,0x6a4020, 21, 1.25,  .8);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ROOM 3 – STORAGE
+// ─────────────────────────────────────────────────────────────────────────────
+slab( 8, .25, 14, lm(TX.storFloor, 1, 2),  0, -.125,-15);
+slab( 8, .25, 14, lm(TX.storCeil,  1, 2),  0, 4.125,-15);
+slab(.25,  4,  14,lm(TX.storWall,  1, 1), -4,    2, -15);
+slab(.25,  4,  14,lm(TX.storWall,  1, 1),  4,    2, -15);
+slab( 8,  4,  .25,lm(TX.storWall,  1, 1),  0,    2, -22);
+slab(.15, 1.6,  5, 0x10182c,-3.5,  .8, -15);
+slab( 3,  .1,   1, 0x1a2840,-2.5, 1.0, -13);
+slab( 3,  .1,   1, 0x1a2840,-2.5, 1.6, -13);
+slab(.7,  .5,  .7, 0x1c2e10,-2.2,  .35,-13);
+slab(.7,  .5,  .7, 0x2e1c10,-1.2,  .35,-13);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ASSET FIXTURES
+// ─────────────────────────────────────────────────────────────────────────────
+const markers   = [];
+const assetById = {};
+
+// Invisible hitbox sphere used for raycasting + halo/light anchor
+function makeHitbox(asset, radius) {
+  const hitbox = new THREE.Mesh(
+    new THREE.SphereGeometry(radius, 6, 4),
+    new THREE.MeshBasicMaterial({ visible: false })
+  );
+  hitbox.position.set(...asset.pos);
+  hitbox.userData.id = asset.id;
+  scene.add(hitbox);
+  markers.push(hitbox);
+
+  const halo = new THREE.Mesh(
+    new THREE.SphereGeometry(radius * 1.9, 8, 6),
+    new THREE.MeshBasicMaterial({ color: asset.color, transparent: true, opacity: 0.11 })
+  );
+  halo.position.set(...asset.pos);
+  scene.add(halo);
+  hitbox.userData.halo = halo;
+
+  const ptLight = new THREE.PointLight(asset.color, 1.4, 5.5);
+  ptLight.position.set(...asset.pos);
+  scene.add(ptLight);
+  hitbox.userData.ptLight = ptLight;
+
+  assetById[asset.id] = asset;
+}
+
+// ── Light Fixture  (ceiling-mounted LED panel, Main Hall) ──────────────────
+{
+  const mHouse = new THREE.MeshLambertMaterial({ color: 0x282830 });
+  const mLens  = new THREE.MeshBasicMaterial({ color: 0xfffce8 });
+  const housing = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.08, 0.6), mHouse);
+  housing.position.set(0, 3.96, 0);
+  scene.add(housing);
+  const lens = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.012, 0.5), mLens);
+  lens.position.set(0, 3.915, 0);
+  scene.add(lens);
+  makeHitbox(ASSETS[0], 0.55);
+}
+
+// ── Circulation Pump  (Boiler Room, floor-mounted) ─────────────────────────
+{
+  const mIron = new THREE.MeshLambertMaterial({ color: 0x3d1a0f });
+  const mDark = new THREE.MeshLambertMaterial({ color: 0x1c1c24 });
+  const body  = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.80, 8), mIron);
+  body.position.set(15, 0.75, 0);
+  scene.add(body);
+  const flange = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.05, 8), mDark);
+  flange.position.set(15, 1.175, 0);
+  scene.add(flange);
+  const motor = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.28, 0.24), mDark);
+  motor.position.set(15.30, 0.75, 0);
+  scene.add(motor);
+  const pipeUp = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.35, 6), mDark);
+  pipeUp.position.set(15, 1.375, 0);
+  scene.add(pipeUp);
+  makeHitbox(ASSETS[1], 0.40);
+}
+
+// ── Sprinkler Head  (ceiling-mounted, Storage) ─────────────────────────────
+{
+  const mMetal = new THREE.MeshLambertMaterial({ color: 0x888890 });
+  const mBrass = new THREE.MeshLambertMaterial({ color: 0x9a8030 });
+  const pipe   = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.32, 6), mMetal);
+  pipe.position.set(0, 3.84, -14);
+  scene.add(pipe);
+  const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.035, 0.10, 6), mMetal);
+  nozzle.position.set(0, 3.72, -14);
+  scene.add(nozzle);
+  const disc   = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.018, 8), mBrass);
+  disc.position.set(0, 3.66, -14);
+  scene.add(disc);
+  makeHitbox(ASSETS[2], 0.28);
+}
+
+// ── Emergency Exit / Lighting  (Main Hall, north wall area) ───────────────
+{
+  const mCase  = new THREE.MeshLambertMaterial({ color: 0x1a0a0a });
+  const mFace  = new THREE.MeshBasicMaterial({ color: 0xff1122 });
+  const mFlood = new THREE.MeshBasicMaterial({ color: 0xfff8e0 });
+  const housing = new THREE.Mesh(new THREE.BoxGeometry(0.70, 0.32, 0.12), mCase);
+  housing.position.set(-6.5, 2.92, 6.50);
+  scene.add(housing);
+  const face = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.22, 0.02), mFace);
+  face.position.set(-6.5, 2.94, 6.44);
+  scene.add(face);
+  const flood = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.08, 0.16), mFlood);
+  flood.position.set(-6.5, 2.72, 6.50);
+  scene.add(flood);
+  makeHitbox(ASSETS[3], 0.38);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DOM REFS
+// ─────────────────────────────────────────────────────────────────────────────
+const instrEl      = document.getElementById('instr');
+const crossEl      = document.getElementById('crosshair');
+const panelEl      = document.getElementById('panel');
+const mobInstrEl   = document.getElementById('mob-instr');
+const joystickEl   = document.getElementById('joystick-wrap');
+const knobEl       = document.getElementById('joystick-knob');
+const sbRoomEl     = document.getElementById('sb-room');
+const sbTargetEl   = document.getElementById('sb-target');
+const mapOverlayEl = document.getElementById('map-overlay');
+const mapCanvasEl  = document.getElementById('map-canvas');
+const mapBtnEl     = document.getElementById('map-btn');
+const mapCtx       = mapCanvasEl.getContext('2d');
+const schOverlayEl = document.getElementById('sch-overlay');
+const schBtnEl     = document.getElementById('sch-btn');
+
+let panelOpen   = false;
+let mapOpen     = false;
+let schOpen     = false;
+let lastRoomStr = '';
+
+let mapScale = 1, mapOffX = 0, mapOffY = 0;
+let moveTarget  = null;
+let hoveredRoom = null;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STATUS BAR HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+function getRoomLabel(x, z) {
+  for (const r of ROOM_LABELS)
+    if (x >= r.xMin && x <= r.xMax && z >= r.zMin && z <= r.zMax) return r.label;
+  return '';
+}
+
+function setStatusRoom(label) {
+  if (label === lastRoomStr) return;
+  lastRoomStr = label;
+  sbRoomEl.textContent = label || '—';
+  sbRoomEl.className   = 'sb-value ' + (label ? '' : 'sb-dim');
+}
+
+function setStatusTarget(name) {
+  sbTargetEl.textContent = name || '—';
+  sbTargetEl.className   = 'sb-value ' + (name ? 'sb-live' : 'sb-dim');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DESKTOP: POINTER LOCK CONTROLS
+// ─────────────────────────────────────────────────────────────────────────────
+const controls = new PointerLockControls(camera, renderer.domElement);
+const MAX_PICK_DIST = 12;
+
+if (!isTouchOnly) {
+  renderer.domElement.addEventListener('click', () => {
+    if (!controls.isLocked && !panelOpen) controls.lock();
+  });
+  controls.addEventListener('lock', () => {
+    instrEl.textContent = 'WASD = move  ·  Mouse = look  ·  Click marker = inspect  ·  Tab = map  ·  M = schematic  ·  ESC = release';
+  });
+  controls.addEventListener('unlock', () => {
+    if (!panelOpen)
+      instrEl.textContent = 'Click to start  ·  WASD = move  ·  Mouse = look  ·  Click marker = inspect';
+  });
+  // Desktop click → pick
+  renderer.domElement.addEventListener('click', () => {
+    if (!controls.isLocked) return;
+    const rc = new THREE.Raycaster();
+    rc.setFromCamera(new THREE.Vector2(0, 0), camera);
+    const hits = rc.intersectObjects(markers);
+    if (hits.length && hits[0].distance < MAX_PICK_DIST)
+      openPanel(assetById[hits[0].object.userData.id]);
+  });
+} else {
+  instrEl.style.display    = 'none';
+  crossEl.style.display    = 'none';
+  mobInstrEl.style.display = 'block';
+  joystickEl.style.display = 'block';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DESKTOP MOVEMENT (WASD)
+// ─────────────────────────────────────────────────────────────────────────────
+const keys = {};
+document.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (e.code === 'Tab') { e.preventDefault(); if (!panelOpen) toggleMap(); }
+  if (e.code === 'KeyM') { if (!panelOpen) toggleSchematic(); }
+});
+document.addEventListener('keyup', e => { keys[e.code] = false; });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MOBILE TOUCH CONTROLS
+// ─────────────────────────────────────────────────────────────────────────────
+const JOYSTICK_R   = 60;
+const LOOK_SENS    = 0.0045;
+const TAP_MAX_DIST = 14;
+
+let jsId     = null;
+let jsOrigin = { x: 0, y: 0 };
+const jsVec  = { x: 0, y: 0 };
+
+let lkId        = null;
+let lkLastX     = 0;
+let lkLastY     = 0;
+let lkTotalMove = 0;
+
+let mYaw   = 0;
+let mPitch = 0;
+
+function joystickCenter() {
+  const r = joystickEl.getBoundingClientRect();
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+}
+function moveKnob(rawX, rawY) {
+  const dist  = Math.sqrt(rawX * rawX + rawY * rawY);
+  const scale = Math.min(dist, JOYSTICK_R) / (dist || 1);
+  const cx = rawX * scale, cy = rawY * scale;
+  knobEl.style.left = (36 + cx) + 'px';
+  knobEl.style.top  = (36 + cy) + 'px';
+  jsVec.x = cx / JOYSTICK_R;
+  jsVec.y = cy / JOYSTICK_R;
+}
+function resetKnob() {
+  knobEl.style.left = '36px'; knobEl.style.top = '36px';
+  jsVec.x = 0; jsVec.y = 0;
+}
+
+const _mvVec = new THREE.Vector3();
+function mobileMoveForward(dist) {
+  _mvVec.setFromMatrixColumn(camera.matrix, 0);
+  _mvVec.crossVectors(camera.up, _mvVec);
+  camera.position.addScaledVector(_mvVec, dist);
+}
+function mobileMoveRight(dist) {
+  _mvVec.setFromMatrixColumn(camera.matrix, 0);
+  camera.position.addScaledVector(_mvVec, dist);
+}
+
+if (isTouchOnly) {
+  document.addEventListener('touchstart', e => {
+    if (panelOpen || mapOpen || schOpen) return;
+    Array.from(e.changedTouches).forEach(t => {
+      const jc = joystickCenter();
+      const dx = t.clientX - jc.x, dy = t.clientY - jc.y;
+      if (jsId === null && Math.sqrt(dx*dx + dy*dy) <= JOYSTICK_R * 1.6) {
+        jsId = t.identifier; jsOrigin = jc; moveKnob(dx, dy);
+      } else if (lkId === null) {
+        lkId = t.identifier; lkLastX = t.clientX; lkLastY = t.clientY; lkTotalMove = 0;
+      }
+    });
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    if (panelOpen || mapOpen || schOpen) return;
+    Array.from(e.changedTouches).forEach(t => {
+      if (t.identifier === jsId) {
+        moveKnob(t.clientX - jsOrigin.x, t.clientY - jsOrigin.y);
+      } else if (t.identifier === lkId) {
+        const dx = t.clientX - lkLastX, dy = t.clientY - lkLastY;
+        lkTotalMove += Math.sqrt(dx*dx + dy*dy);
+        mYaw   -= dx * LOOK_SENS;
+        mPitch -= dy * LOOK_SENS;
+        mPitch  = Math.max(-Math.PI/2 + 0.05, Math.min(Math.PI/2 - 0.05, mPitch));
+        camera.rotation.order = 'YXZ';
+        camera.rotation.y = mYaw;
+        camera.rotation.x = mPitch;
+        lkLastX = t.clientX; lkLastY = t.clientY;
+      }
+    });
+  }, { passive: true });
+
+  document.addEventListener('touchend', e => {
+    Array.from(e.changedTouches).forEach(t => {
+      if (t.identifier === jsId) {
+        jsId = null; resetKnob();
+      } else if (t.identifier === lkId) {
+        if (lkTotalMove < TAP_MAX_DIST && !panelOpen) {
+          const rc = new THREE.Raycaster();
+          rc.setFromCamera(
+            new THREE.Vector2((t.clientX/innerWidth)*2-1, -(t.clientY/innerHeight)*2+1),
+            camera
+          );
+          const hits = rc.intersectObjects(markers);
+          if (hits.length && hits[0].distance < MAX_PICK_DIST)
+            openPanel(assetById[hits[0].object.userData.id]);
+        }
+        lkId = null;
+      }
+    });
+  }, { passive: true });
+
+  panelEl.addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
+  panelEl.addEventListener('touchmove',  e => e.stopPropagation(), { passive: true });
+  panelEl.addEventListener('touchend',   e => e.stopPropagation(), { passive: true });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INFO PANEL
+// ─────────────────────────────────────────────────────────────────────────────
+function specRows(specs) {
+  return specs.map(([l, v]) =>
+    `<div class="sr"><span class="sl">${l}</span><span class="sv">${v}</span></div>`
+  ).join('');
+}
+
+function openPanel(asset) {
+  panelOpen = true;
+  if (!isTouchOnly) controls.unlock();
+  document.getElementById('pname').textContent = asset.name;
+  document.getElementById('ptype').textContent = asset.type;
+
+  const specsEl = document.getElementById('pspecs');
+
+  if (asset.maintenance || asset.history || asset.docs) {
+    // ── Tabbed layout ──────────────────────────────────────────────────────
+    const days     = Math.round((new Date(asset.maintenance.nextDue) - Date.now()) / 86400000);
+    const dueColor = days < 0 ? '#ff4444' : days < 60 ? '#f0a030' : '#4ec97a';
+    const dueLabel = days < 0 ? `${-days}d overdue` : `${days}d away`;
+
+    const maintRows =
+      `<div class="sr"><span class="sl">Schedule</span><span class="sv">${asset.maintenance.schedule}</span></div>` +
+      `<div class="sr"><span class="sl">Next Due</span><span class="sv" style="color:${dueColor}">${asset.maintenance.nextDue} <span style="opacity:.6;font-size:9px">(${dueLabel})</span></span></div>`;
+
+    const docLinks = (asset.docs || []).map(d =>
+      `<a href="${d.url}" class="pdoc-btn" target="_blank" rel="noopener">${d.label}</a>`
+    ).join('');
+
+    const histRows = (asset.history || []).map(h =>
+      `<div class="phist-row"><div class="phist-date">${h.date}</div><div class="phist-note">${h.note}</div></div>`
+    ).join('');
+
+    specsEl.innerHTML = `
+      <div class="ptabs">
+        <button class="ptab active" data-tab="specs">Specs</button>
+        <button class="ptab"        data-tab="maint">Maintenance</button>
+        <button class="ptab"        data-tab="hist">History</button>
+      </div>
+      <div data-body="specs">${specRows(asset.specs)}</div>
+      <div data-body="maint" style="display:none">${maintRows}${docLinks}</div>
+      <div data-body="hist"  style="display:none">${histRows}</div>`;
+
+    specsEl.querySelectorAll('.ptab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        specsEl.querySelectorAll('.ptab').forEach(b => b.classList.remove('active'));
+        specsEl.querySelectorAll('[data-body]').forEach(b => b.style.display = 'none');
+        btn.classList.add('active');
+        specsEl.querySelector(`[data-body="${btn.dataset.tab}"]`).style.display = '';
+      });
+    });
+  } else {
+    // ── Simple list (all other assets) ────────────────────────────────────
+    specsEl.innerHTML = specRows(asset.specs);
+  }
+
+  panelEl.style.display = 'block';
+  if (!isTouchOnly) {
+    crossEl.textContent = '+';
+    crossEl.style.color = 'rgba(255,255,255,.75)';
+  }
+}
+
+function closePanel() {
+  panelOpen = false;
+  panelEl.style.display = 'none';
+}
+
+panelEl.addEventListener('click', e => e.stopPropagation());
+document.getElementById('cbtn').addEventListener('click', closePanel);
+document.getElementById('obtn').addEventListener('click', () => {
+  const name = document.getElementById('pname').textContent;
+  alert(`Order submitted for:\n"${name}"\n\n(In production this creates a work order in PocketBase.)`);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUTOMAP
+// ─────────────────────────────────────────────────────────────────────────────
+function hexCSS(hex) { return '#' + hex.toString(16).padStart(6, '0'); }
+
+function drawMap() {
+  const W = mapCanvasEl.width, H = mapCanvasEl.height;
+  mapCtx.clearRect(0, 0, W, H);
+
+  const PAD    = 28;
+  const worldW = MAP_WORLD.maxX - MAP_WORLD.minX; // 32
+  const worldH = MAP_WORLD.maxZ - MAP_WORLD.minZ; // 30
+  const scale  = Math.min((W - PAD * 2) / worldW, (H - PAD * 2) / worldH);
+  const offX   = (W - worldW * scale) / 2;
+  const offY   = (H - worldH * scale) / 2;
+  mapScale = scale; mapOffX = offX; mapOffY = offY;
+
+  const wx = x => offX + (x - MAP_WORLD.minX) * scale;
+  const wz = z => offY + (z - MAP_WORLD.minZ) * scale;
+
+  // Room fills
+  MAP_ROOMS.forEach(r => {
+    mapCtx.fillStyle = r.fill;
+    mapCtx.fillRect(wx(r.x1), wz(r.z1), (r.x2 - r.x1) * scale, (r.z2 - r.z1) * scale);
+    if (hoveredRoom === r) {
+      mapCtx.fillStyle = 'rgba(255,255,255,0.07)';
+      mapCtx.fillRect(wx(r.x1), wz(r.z1), (r.x2 - r.x1) * scale, (r.z2 - r.z1) * scale);
+    }
+  });
+
+  // Walls
+  mapCtx.beginPath();
+  mapCtx.strokeStyle = 'rgba(90,115,175,0.85)';
+  mapCtx.lineWidth   = 2;
+  mapCtx.lineCap     = 'round';
+  MAP_WALLS.forEach(([x1, z1, x2, z2]) => {
+    mapCtx.moveTo(wx(x1), wz(z1));
+    mapCtx.lineTo(wx(x2), wz(z2));
+  });
+  mapCtx.stroke();
+
+  // Room labels
+  mapCtx.font         = `${Math.max(9, Math.round(scale * 0.55))}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+  mapCtx.fillStyle    = 'rgba(255,255,255,0.18)';
+  mapCtx.textAlign    = 'center';
+  mapCtx.textBaseline = 'middle';
+  MAP_ROOMS.forEach(r => {
+    mapCtx.fillText(r.label.toUpperCase(), wx((r.x1 + r.x2) / 2), wz((r.z1 + r.z2) / 2));
+  });
+
+  // Asset markers
+  ASSETS.forEach(a => {
+    const cx  = wx(a.pos[0]);
+    const cy  = wz(a.pos[2]);
+    const col = hexCSS(a.color);
+    mapCtx.save();
+    mapCtx.shadowColor = col;
+    mapCtx.shadowBlur  = 8;
+    mapCtx.beginPath();
+    mapCtx.arc(cx, cy, 5, 0, Math.PI * 2);
+    mapCtx.fillStyle = col;
+    mapCtx.fill();
+    mapCtx.restore();
+  });
+
+  // Player arrow
+  const px  = wx(camera.position.x);
+  const py  = wz(camera.position.z);
+  const yaw = camera.rotation.y; // valid for both desktop (PointerLockControls) and mobile
+  const adx = -Math.sin(yaw);   // forward in canvas X (east = right)
+  const ady = -Math.cos(yaw);   // forward in canvas Y (south = down → north = up)
+  const L   = 13, W2 = 6, BACK = 5;
+  const tipX  = px + adx * L,          tipY  = py + ady * L;
+  const baseX = px - adx * BACK,       baseY = py - ady * BACK;
+  const perpX = -ady,                  perpY = adx;
+
+  mapCtx.beginPath();
+  mapCtx.moveTo(tipX, tipY);
+  mapCtx.lineTo(baseX + perpX * W2, baseY + perpY * W2);
+  mapCtx.lineTo(baseX - perpX * W2, baseY - perpY * W2);
+  mapCtx.closePath();
+  mapCtx.fillStyle   = '#4a9eff';
+  mapCtx.strokeStyle = 'rgba(255,255,255,0.55)';
+  mapCtx.lineWidth   = 1;
+  mapCtx.fill();
+  mapCtx.stroke();
+}
+
+function sizeAndDrawMap() {
+  const body = document.getElementById('map-body');
+  const rect = body.getBoundingClientRect();
+  mapCanvasEl.width  = Math.max(1, Math.floor(rect.width));
+  mapCanvasEl.height = Math.max(1, Math.floor(rect.height));
+  drawMap();
+}
+
+function toggleMap() {
+  mapOpen = !mapOpen;
+  mapOverlayEl.classList.toggle('open', mapOpen);
+  if (mapOpen) {
+    if (schOpen) toggleSchematic();
+    if (controls.isLocked) controls.unlock();
+    resetKnob();
+    jsId = null; lkId = null;
+    requestAnimationFrame(sizeAndDrawMap);
+  }
+}
+
+document.getElementById('map-close-btn').addEventListener('click', toggleMap);
+mapBtnEl.addEventListener('click', () => { if (!panelOpen) toggleMap(); });
+
+window.addEventListener('resize', () => { if (mapOpen) sizeAndDrawMap(); });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PANEL SCHEDULE (SCHEMATIC VIEW)
+// ─────────────────────────────────────────────────────────────────────────────
+function voltColor(v) {
+  return v >= 277 ? '#ff5555' : v >= 240 ? '#f0a030' : '#88c6ff';
+}
+
+function roomCenterForPos(pos) {
+  const [px, , pz] = pos;
+  for (const r of MAP_ROOMS) {
+    if (px >= r.x1 && px <= r.x2 && pz >= r.z1 && pz <= r.z2)
+      return { x: (r.x1 + r.x2) / 2, z: (r.z1 + r.z2) / 2 };
+  }
+  return { x: px, z: pz };
+}
+
+function buildSchematicHTML() {
+  // Group assets by panel → circuit number
+  const panels = {};
+  for (const a of ASSETS) {
+    if (!a.circuit) continue;
+    const { panel, num, volts, amps } = a.circuit;
+    if (!panels[panel]) panels[panel] = {};
+    if (!panels[panel][num]) panels[panel][num] = { num, volts, amps, assets: [] };
+    panels[panel][num].assets.push(a);
+  }
+  if (!Object.keys(panels).length)
+    return '<p style="color:rgba(255,255,255,.3);font-size:13px;padding:20px 0">No panel data on record.</p>';
+
+  let html = '';
+  for (const panelName of Object.keys(panels).sort()) {
+    html += `<div class="sch-panel"><div class="sch-panel-hdr">${panelName}</div>`;
+    const circuits = Object.values(panels[panelName])
+      .sort((a, b) => parseInt(a.num) - parseInt(b.num));
+    for (const c of circuits) {
+      const desc  = c.assets.map(a => a.name).join(', ');
+      const nav   = roomCenterForPos(c.assets[0].pos);
+      const cnt   = c.assets.length === 1 ? '1 asset' : `${c.assets.length} assets`;
+      html +=
+        `<div class="sch-circuit" data-cx="${nav.x}" data-cz="${nav.z}">` +
+          `<span class="sch-cnum">C${c.num}</span>` +
+          `<span class="sch-cdesc">${desc}</span>` +
+          `<span class="sch-cmeta">` +
+            `<span class="sch-volt" style="color:${voltColor(c.volts)}">${c.volts}V</span>` +
+            (c.amps ? `<span class="sch-amp">${c.amps}A</span>` : '') +
+            `<span class="sch-cnt">${cnt}</span>` +
+          `</span>` +
+        `</div>`;
+    }
+    html += '</div>';
+  }
+  return html;
+}
+
+function toggleSchematic() {
+  schOpen = !schOpen;
+  schOverlayEl.classList.toggle('open', schOpen);
+  if (schOpen) {
+    if (mapOpen) toggleMap();
+    if (controls.isLocked) controls.unlock();
+    resetKnob();
+    jsId = null; lkId = null;
+    const body = document.getElementById('sch-body');
+    body.innerHTML = buildSchematicHTML();
+    body.querySelectorAll('.sch-circuit').forEach(row => {
+      row.addEventListener('click', () => {
+        moveTarget = { x: parseFloat(row.dataset.cx), z: parseFloat(row.dataset.cz) };
+        toggleSchematic();
+      });
+    });
+  }
+}
+
+document.getElementById('sch-close-btn').addEventListener('click', toggleSchematic);
+schBtnEl.addEventListener('click', () => { if (!panelOpen) toggleSchematic(); });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAP ROOM NAVIGATION
+// ─────────────────────────────────────────────────────────────────────────────
+function canvasToWorld(canvasX, canvasY) {
+  return {
+    x: (canvasX - mapOffX) / mapScale + MAP_WORLD.minX,
+    z: (canvasY - mapOffY) / mapScale + MAP_WORLD.minZ,
+  };
+}
+
+function handleMapClick(canvasX, canvasY) {
+  // Asset markers take priority — ignore clicks within 10px of one
+  for (const a of ASSETS) {
+    const cx = mapOffX + (a.pos[0] - MAP_WORLD.minX) * mapScale;
+    const cy = mapOffY + (a.pos[2] - MAP_WORLD.minZ) * mapScale;
+    if (Math.hypot(canvasX - cx, canvasY - cy) < 10) return;
+  }
+  const { x, z } = canvasToWorld(canvasX, canvasY);
+  for (const r of MAP_ROOMS) {
+    if (x >= r.x1 && x <= r.x2 && z >= r.z1 && z <= r.z2) {
+      moveTarget = { x: (r.x1 + r.x2) / 2, z: (r.z1 + r.z2) / 2 };
+      toggleMap();
+      return;
+    }
+  }
+}
+
+// Desktop: click + hover cursor feedback
+mapCanvasEl.addEventListener('click', e => {
+  const rect = mapCanvasEl.getBoundingClientRect();
+  handleMapClick(e.clientX - rect.left, e.clientY - rect.top);
+});
+
+mapCanvasEl.addEventListener('mousemove', e => {
+  if (!mapOpen) return;
+  const rect = mapCanvasEl.getBoundingClientRect();
+  const { x, z } = canvasToWorld(e.clientX - rect.left, e.clientY - rect.top);
+  let found = null;
+  for (const r of MAP_ROOMS)
+    if (x >= r.x1 && x <= r.x2 && z >= r.z1 && z <= r.z2) { found = r; break; }
+  if (found !== hoveredRoom) {
+    hoveredRoom = found;
+    mapCanvasEl.style.cursor = found ? 'pointer' : 'default';
+    drawMap();
+  }
+});
+
+mapCanvasEl.addEventListener('mouseleave', () => {
+  if (hoveredRoom) { hoveredRoom = null; mapCanvasEl.style.cursor = 'default'; drawMap(); }
+});
+
+// Mobile: tap to navigate
+mapCanvasEl.addEventListener('touchend', e => {
+  e.preventDefault();
+  const t    = e.changedTouches[0];
+  const rect = mapCanvasEl.getBoundingClientRect();
+  handleMapClick(t.clientX - rect.left, t.clientY - rect.top);
+}, { passive: false });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ANIMATE
+// ─────────────────────────────────────────────────────────────────────────────
+const clock   = new THREE.Clock();
+const EYE_Y   = 1.7;
+const SPEED   = 5.5;
+const moveDir = new THREE.Vector3();
+let elapsed   = 0;
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = clock.getDelta();
+  elapsed += dt;
+
+  // ── DESKTOP MOVEMENT + COLLISION ──────────────────────────
+  if (!isTouchOnly && controls.isLocked && !moveTarget) {
+    moveDir.set(0, 0, 0);
+    if (keys['KeyW'] || keys['ArrowUp'])    moveDir.z -= 1;
+    if (keys['KeyS'] || keys['ArrowDown'])  moveDir.z += 1;
+    if (keys['KeyA'] || keys['ArrowLeft'])  moveDir.x -= 1;
+    if (keys['KeyD'] || keys['ArrowRight']) moveDir.x += 1;
+
+    if (moveDir.lengthSq() > 0) {
+      const oldX = camera.position.x, oldZ = camera.position.z;
+      moveDir.normalize();
+      controls.moveForward(-moveDir.z * SPEED * dt);
+      controls.moveRight(   moveDir.x * SPEED * dt);
+      const [rx, rz] = resolveCollision(oldX, oldZ, camera.position.x, camera.position.z);
+      camera.position.x = rx;
+      camera.position.z = rz;
+    }
+    camera.position.y = EYE_Y;
+  }
+
+  // ── MOBILE MOVEMENT + COLLISION ───────────────────────────
+  if (isTouchOnly && !panelOpen && !moveTarget && (jsVec.x !== 0 || jsVec.y !== 0)) {
+    const oldX = camera.position.x, oldZ = camera.position.z;
+    mobileMoveForward(-jsVec.y * SPEED * dt);
+    mobileMoveRight(   jsVec.x * SPEED * dt);
+    const [rx, rz] = resolveCollision(oldX, oldZ, camera.position.x, camera.position.z);
+    camera.position.x = rx;
+    camera.position.z = rz;
+    camera.position.y = EYE_Y;
+  }
+
+  // ── SMOOTH ROOM NAVIGATION ────────────────────────────────
+  if (moveTarget) {
+    const dx = moveTarget.x - camera.position.x;
+    const dz = moveTarget.z - camera.position.z;
+    const dist = Math.sqrt(dx * dx + dz * dz);
+    if (dist < 0.05) {
+      camera.position.x = moveTarget.x;
+      camera.position.z = moveTarget.z;
+      moveTarget = null;
+    } else {
+      const step = Math.min(dist, SPEED * 3 * dt);
+      camera.position.x += (dx / dist) * step;
+      camera.position.z += (dz / dist) * step;
+    }
+    camera.position.y = EYE_Y;
+  }
+
+  // ── MARKER PULSE ──────────────────────────────────────────
+  markers.forEach((m, i) => {
+    const s = 1 + .22 * Math.sin(elapsed * 3.2 + i * 1.9);
+    m.scale.setScalar(s);
+    m.userData.halo.scale.setScalar(s);
+    m.userData.ptLight.intensity = 1.0 + .6 * Math.sin(elapsed * 3.2 + i * 1.9);
+  });
+
+  // ── STATUS BAR: room ──────────────────────────────────────
+  setStatusRoom(getRoomLabel(camera.position.x, camera.position.z));
+
+  // ── STATUS BAR: targeting + desktop crosshair feedback ────
+  if (!isTouchOnly && controls.isLocked) {
+    const rc = new THREE.Raycaster();
+    rc.setFromCamera(new THREE.Vector2(0, 0), camera);
+    const hits   = rc.intersectObjects(markers);
+    const aiming = hits.length > 0 && hits[0].distance < MAX_PICK_DIST;
+    const name   = aiming ? assetById[hits[0].object.userData.id].name : null;
+
+    crossEl.textContent = aiming ? '◎' : '+';
+    crossEl.style.color = aiming ? '#ffd84a' : 'rgba(255,255,255,.75)';
+    setStatusTarget(name);
+  } else if (!panelOpen) {
+    if (!isTouchOnly) {
+      crossEl.textContent = '+';
+      crossEl.style.color = 'rgba(255,255,255,.75)';
+    }
+    if (!panelOpen) setStatusTarget(null);
+  }
+
+  renderer.render(scene, camera);
+}
+animate();
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RESIZE
+// ─────────────────────────────────────────────────────────────────────────────
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>
